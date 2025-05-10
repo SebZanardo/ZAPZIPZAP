@@ -47,6 +47,8 @@ int main(void) {
 
     int player_x = 20;
     int player_y = 12;
+    int BOUNDS_X = GRID_WIDTH * 2;
+    int BOUNDS_Y = GRID_HEIGHT * 2;
 
     while (!WindowShouldClose()) {
         if (IsWindowResized()) {
@@ -55,29 +57,41 @@ int main(void) {
 
         // INPUT
         if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_Z)) {
-            if (!grid[(int)(player_y / 2) * GRID_WIDTH + (int)(player_x / 2)])
+            while (!grid[(int)(player_y / 2) * GRID_WIDTH + (int)(player_x / 2)])
             {
+                if (player_x < 0 || player_y > BOUNDS_Y) {
+                    break;
+                }
                 player_x--;
                 player_y++;
             }
         }
         if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_R)) {
-            if (!grid[(int)((player_y - 1) / 2) * GRID_WIDTH + (int)((player_x + 1) / 2)])
+            while (!grid[(int)((player_y - 1) / 2) * GRID_WIDTH + (int)((player_x + 1) / 2)])
             {
+                if (player_x > BOUNDS_X || player_y < 0) {
+                    break;
+                }
                 player_x++;
                 player_y--;
             }
         }
         if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
-            if (grid[(int)((player_y - 1) / 2) * GRID_WIDTH + (int)((player_x) / 2)])
+            while (grid[(int)((player_y - 1) / 2) * GRID_WIDTH + (int)((player_x) / 2)])
             {
+                if (player_x < 0 || player_y < 0) {
+                    break;
+                }
                 player_x--;
                 player_y--;
             }
         }
         if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_C)) {
-            if (grid[(int)(player_y / 2) * GRID_WIDTH + (int)((player_x + 1) / 2)])
+            while (grid[(int)(player_y / 2) * GRID_WIDTH + (int)((player_x + 1) / 2)])
             {
+                if (player_x > BOUNDS_X || player_y > BOUNDS_Y) {
+                    break;
+                }
                 player_x++;
                 player_y++;
             }
