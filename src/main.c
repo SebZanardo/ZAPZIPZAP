@@ -48,6 +48,8 @@ int main(void) {
     int BOUNDS_Y = GRID_HEIGHT * 2;
 
     MOVE_DIRECTION last_move = NO_DIRECTION;
+    uint32_t score = 0;
+    uint32_t highscore = 360;
     int zaps = 10;
     int zap_cooldown = 10;
     int zap_cooldown_counter = 0;
@@ -108,6 +110,8 @@ int main(void) {
             zap_cooldown_counter--;
         }
 
+        score++;
+
         // RENDER
         BeginTextureMode(target);
         ClearBackground(C64_BLUE);
@@ -148,6 +152,26 @@ int main(void) {
         for (int i = 0; i < zaps; i++) {
             pos.y = i * CELL_SIZE;
             DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+        }
+
+        // Score in binary
+        if (score > highscore) {
+            pos.x = 0;
+            pos.y = 0;
+            char_rect.x = C64_TROPHY * CELL_SIZE;
+            DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+        }
+
+        uint32_t mask = 1;
+        pos.x = 0;
+        for (int i = 0; i < (GRID_HEIGHT - 2); i++) {
+            pos.y = i * CELL_SIZE + CELL_SIZE;
+            char_rect.x = C64_0 * CELL_SIZE;
+            if (score & mask) {
+                char_rect.x = C64_1 * CELL_SIZE;
+            }
+            DrawTextureRec(spritesheet, char_rect, pos, C64_WHITE);
+            mask *= 2;
         }
 
         EndTextureMode();
