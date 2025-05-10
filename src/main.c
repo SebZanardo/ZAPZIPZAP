@@ -243,10 +243,9 @@ void handle_resize(WindowParameters *window) {
 
 
 int new_player_position(int x, int y, MOVE_DIRECTION dir) {
-    assert (dir != NO_DIRECTION);
     switch (dir) {
         case NO_DIRECTION:
-            return -1;
+            break;
         case NORTH_EAST:
             return (int)((y - 1) / 2) * GRID_WIDTH + (int)((x + 1) / 2);
         case SOUTH_EAST:
@@ -256,4 +255,6 @@ int new_player_position(int x, int y, MOVE_DIRECTION dir) {
         case NORTH_WEST:
             return (int)((y - 1) / 2) * GRID_WIDTH + (int)(x / 2);
     }
+    assert (dir != NO_DIRECTION);
+    return -1;
 }
