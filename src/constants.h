@@ -7,11 +7,11 @@
 #define WINDOW_HEIGHT 200
 #define CELL_SIZE 8
 
-#define GRID_WIDTH (WINDOW_WIDTH / CELL_SIZE + 1)
+#define GRID_WIDTH (WINDOW_WIDTH / CELL_SIZE - 1)
 #define GRID_HEIGHT (WINDOW_HEIGHT / CELL_SIZE + 1)
 #define GRID_CELLS (GRID_WIDTH * GRID_HEIGHT)
 
-#define WINDOW_CAPTION "alternate"
+#define WINDOW_CAPTION "ZIPZAP"
 #define FPS 60
 
 // C64 colours

@@ -1,4 +1,3 @@
-/*#include <stdio.h>*/
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -30,7 +29,7 @@ int main(void) {
     handle_resize(&window);
 
     // +1 So scrolling looks seamless
-    int grid[GRID_CELLS];
+    WALL_STATE grid[GRID_CELLS];
 
     // Random starting maze
     for (int i = 0; i < GRID_CELLS; i++) {
@@ -42,7 +41,6 @@ int main(void) {
     Texture2D spritesheet = LoadTexture("src/resources/spritesheet.png");
     Vector2 pos = (Vector2) {0, 0};
     Rectangle char_rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
-    /*Rectangle rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};*/
 
     int player_x = 20;
     int player_y = 12;
@@ -50,86 +48,62 @@ int main(void) {
     int BOUNDS_Y = GRID_HEIGHT * 2;
 
     MOVE_DIRECTION last_move = NO_DIRECTION;
+    int zaps = 10;
     int zap_cooldown = 10;
     int zap_cooldown_counter = 0;
     int steps = 0;
-    bool zapped = false;
+    bool moved = false;
 
     while (!WindowShouldClose()) {
-        if (IsWindowResized()) {
-            handle_resize(&window);
-        }
-
-        zapped = false;
+        if (IsWindowResized()) handle_resize(&window);
 
         // INPUT
+        moved = true;
+        steps = 0;
         if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_Z)) {
-            steps = 0;
             last_move = SOUTH_WEST;
-            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_FORWARD)
-            {
+            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_FORWARD) {
                 if (player_x < 0 || player_y > BOUNDS_Y) break;
                 player_x--;
                 player_y++;
                 steps++;
             }
-            if (!steps) {
-                zapped = true;
-            }
-        }
-        if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_R)) {
-            steps = 0;
+        } else if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_R)) {
             last_move = NORTH_EAST;
-            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_FORWARD)
-            {
+            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_FORWARD) {
                 if (player_x > BOUNDS_X || player_y < 0) break;
                 player_x++;
                 player_y--;
                 steps++;
             }
-            if (!steps) {
-                zapped = true;
-            }
-        }
-        if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
-            steps = 0;
+        } else if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
             last_move = NORTH_WEST;
-            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_BACKWARD)
-            {
-                if (player_x < 0 || player_y < 0) {
-                    break;
-                }
+            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_BACKWARD) {
+                if (player_x < 0 || player_y < 0) break;
                 player_x--;
                 player_y--;
                 steps++;
             }
-            if (!steps) {
-                zapped = true;
-            }
-        }
-        if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_C)) {
-            steps = 0;
+        } else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_C)) {
             last_move = SOUTH_EAST;
-            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_BACKWARD)
-            {
-                if (player_x > BOUNDS_X || player_y > BOUNDS_Y) {
-                    break;
-                }
+            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_BACKWARD) {
+                if (player_x > BOUNDS_X || player_y > BOUNDS_Y) break;
                 player_x++;
                 player_y++;
                 steps++;
             }
-            if (!steps) {
-                zapped = true;
-            }
+        } else {
+            moved = false;
         }
 
+
         // UPDATE
-        if (zapped) {
-            zapped = false;
+        if (moved && steps == 0 && zaps > 0) {
             zap_cooldown_counter = zap_cooldown;
             grid[new_player_position(player_x, player_y, last_move)] = WALL_BROKEN;
+            zaps--;
         }
+
         if (zap_cooldown_counter > 0) {
             zap_cooldown_counter--;
         }
@@ -140,7 +114,7 @@ int main(void) {
 
         for (int y = 0; y < GRID_HEIGHT; y++) {
             for (int x = 0; x < GRID_WIDTH; x++) {
-                pos.x = x * CELL_SIZE;
+                pos.x = x * CELL_SIZE + CELL_SIZE;
                 pos.y = y * CELL_SIZE;
 
                 if (grid[y * GRID_WIDTH + x] == WALL_BROKEN) {
@@ -155,9 +129,8 @@ int main(void) {
             }
         }
 
-        int render_x = player_x * 0.5f * CELL_SIZE + 4;
+        int render_x = player_x * 0.5f * CELL_SIZE + CELL_SIZE + 4;
         int render_y = player_y * 0.5f * CELL_SIZE;
-        /*printf("%d, %d\n", player_x, player_y);*/
         DrawCircle(
             render_x,
             render_y,
@@ -165,7 +138,17 @@ int main(void) {
             zap_cooldown_counter > 0 ? C64_YELLOW : C64_WHITE
         );
 
-        /*DrawTexture(spritesheet, 0, 0, C64_LIGHT_BLUE);*/
+        // To cover scrolling maze
+        DrawRectangle(0, 0, CELL_SIZE, WINDOW_HEIGHT, C64_BLUE);
+        DrawRectangle(WINDOW_WIDTH - CELL_SIZE, 0, CELL_SIZE, WINDOW_HEIGHT, C64_BLUE);
+
+        // Zaps left
+        char_rect.x = C64_BOLT * CELL_SIZE;
+        pos.x = WINDOW_WIDTH - CELL_SIZE;
+        for (int i = 0; i < zaps; i++) {
+            pos.y = i * CELL_SIZE;
+            DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+        }
 
         EndTextureMode();
 
@@ -193,11 +176,6 @@ int main(void) {
 
         /*DrawFPS(0, 0);*/
         EndDrawing();
-
-        // LATE-UPDATE
-        if (zapped) {
-            last_move = NO_DIRECTION;
-        }
     }
 
     // DEINITIALISE
@@ -219,9 +197,9 @@ void handle_resize(WindowParameters *window) {
 
 
 int new_player_position(int x, int y, MOVE_DIRECTION dir) {
+    assert (dir != NO_DIRECTION);
     switch (dir) {
         case NO_DIRECTION:
-            assert (dir != NO_DIRECTION);
             return -1;
         case NORTH_EAST:
             return (int)((y - 1) / 2) * GRID_WIDTH + (int)((x + 1) / 2);
