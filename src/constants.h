@@ -11,8 +11,11 @@
 #define GRID_HEIGHT (WINDOW_HEIGHT / CELL_SIZE + 1)
 #define GRID_CELLS (GRID_WIDTH * GRID_HEIGHT)
 
-#define WINDOW_CAPTION "ZIPZAP"
+#define WINDOW_CAPTION "ZAPZIPZAP"
 #define FPS 60
+
+#define NAME_LEN 3
+#define SCORE_LEN 8
 
 // C64 colours
 // Colour names from here: https://sta.c64.org/cbm64col.html

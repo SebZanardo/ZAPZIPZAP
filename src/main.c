@@ -50,6 +50,7 @@ int main(void) {
     MOVE_DIRECTION last_move = NO_DIRECTION;
     uint32_t score = 0;
     uint32_t highscore = 360;
+    char highscore_name[NAME_LEN] = {C64_S, C64_E, C64_B};
     int zaps = 10;
     int zap_cooldown = 10;
     int zap_cooldown_counter = 0;
@@ -154,24 +155,45 @@ int main(void) {
             DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
         }
 
-        // Score in binary
-        if (score > highscore) {
-            pos.x = 0;
-            pos.y = 0;
-            char_rect.x = C64_TROPHY * CELL_SIZE;
+        // Score
+        pos.x = 0;
+        pos.y = 0;
+        for (int i = 0; i < NAME_LEN; i++) {
+            char_rect.x = highscore_name[i] * CELL_SIZE;
             DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+            pos.y += CELL_SIZE;
         }
 
-        uint32_t mask = 1;
-        pos.x = 0;
-        for (int i = 0; i < (GRID_HEIGHT - 2); i++) {
-            pos.y = i * CELL_SIZE + CELL_SIZE;
-            char_rect.x = C64_0 * CELL_SIZE;
-            if (score & mask) {
-                char_rect.x = C64_1 * CELL_SIZE;
-            }
-            DrawTextureRec(spritesheet, char_rect, pos, C64_WHITE);
-            mask *= 2;
+        pos.y += CELL_SIZE; // GAP
+
+        // Highscore
+        pos.y = CELL_SIZE * 11;
+        int div = 1;
+        for (int i = 0; i < SCORE_LEN; i++) {
+            char_rect.x = ((highscore / div) % 10 + C64_0) * CELL_SIZE;
+            DrawTextureRec(spritesheet, char_rect, pos, WHITE);
+            pos.y -= CELL_SIZE;
+            div *= 10;
+        }
+        pos.y = CELL_SIZE * 12;
+
+        pos.y += CELL_SIZE * 2; // GAP * 2
+        if (score > highscore) {
+            char_rect.x = C64_TROPHY * CELL_SIZE;
+            DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+        } else {
+            pos.y += CELL_SIZE; // GAP
+        }
+        pos.y += CELL_SIZE * 2; // GAP * 2
+
+        // Current score
+        pos.y = CELL_SIZE * 24;
+        div = 1;
+        for (int i = 0; i < SCORE_LEN; i++) {
+            char_rect.x = ((score / div) % 10 + C64_0) * CELL_SIZE;
+            DrawTextureRec(spritesheet, char_rect, pos, WHITE);
+            pos.y -= CELL_SIZE;
+            div *= 10;
         }
 
         EndTextureMode();
