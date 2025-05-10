@@ -1,4 +1,4 @@
-#include <stdio.h>
+/*#include <stdio.h>*/
 #include <stdint.h>
 #include <stdbool.h>
 #include "raylib.h"
@@ -6,8 +6,7 @@
 
 
 typedef struct {
-    int screen_width;
-    int screen_height;
+    int screen_width; int screen_height;
     int scale;
     int offset_x;
     int offset_y;
@@ -19,11 +18,11 @@ void handle_resize(WindowParameters *window);
 
 int main(void) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_CAPTION);
     SetWindowMinSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     SetTargetFPS(FPS);
     SetRandomSeed(0);
     HideCursor();
-    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_CAPTION);
 
     WindowParameters window;
     handle_resize(&window);
@@ -44,7 +43,10 @@ int main(void) {
     Texture2D spritesheet = LoadTexture("src/resources/spritesheet.png");
     Vector2 pos = (Vector2) {0, 0};
     Rectangle char_rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
-    Rectangle rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
+    /*Rectangle rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};*/
+
+    int player_x = 20;
+    int player_y = 12;
 
     while (!WindowShouldClose()) {
         if (IsWindowResized()) {
@@ -52,7 +54,34 @@ int main(void) {
         }
 
         // INPUT
-        ;
+        if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_Z)) {
+            if (!grid[(int)(player_y / 2) * GRID_WIDTH + (int)(player_x / 2)])
+            {
+                player_x--;
+                player_y++;
+            }
+        }
+        if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_R)) {
+            if (!grid[(int)((player_y - 1) / 2) * GRID_WIDTH + (int)((player_x + 1) / 2)])
+            {
+                player_x++;
+                player_y--;
+            }
+        }
+        if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+            if (grid[(int)((player_y - 1) / 2) * GRID_WIDTH + (int)((player_x) / 2)])
+            {
+                player_x--;
+                player_y--;
+            }
+        }
+        if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_C)) {
+            if (grid[(int)(player_y / 2) * GRID_WIDTH + (int)((player_x + 1) / 2)])
+            {
+                player_x++;
+                player_y++;
+            }
+        }
 
         // UPDATE
         ;
@@ -61,22 +90,31 @@ int main(void) {
         BeginTextureMode(target);
         ClearBackground(C64_BLUE);
 
-
         for (int y = 0; y < GRID_HEIGHT; y++) {
             for (int x = 0; x < GRID_WIDTH; x++) {
                 pos.x = x * CELL_SIZE;
                 pos.y = y * CELL_SIZE;
 
-                char_rect.x = C64_FORWARD * CELL_SIZE;
+                char_rect.x = C64_BACKWARD * CELL_SIZE;
                 if (grid[y * GRID_WIDTH + x]) {
-                    char_rect.x = C64_BACKWARD * CELL_SIZE;
+                    char_rect.x = C64_FORWARD * CELL_SIZE;
                 }
 
                 DrawTextureRec(spritesheet, char_rect, pos, C64_LIGHT_BLUE);
             }
         }
 
-        DrawTexture(spritesheet, 0, 0, C64_LIGHT_BLUE);
+        int render_x = player_x * 0.5f * CELL_SIZE + 4;
+        int render_y = player_y * 0.5f * CELL_SIZE;
+        /*printf("%d, %d\n", player_x, player_y);*/
+        DrawCircle(
+            render_x,
+            render_y,
+            2,
+            C64_WHITE
+        );
+
+        /*DrawTexture(spritesheet, 0, 0, C64_LIGHT_BLUE);*/
 
         EndTextureMode();
 
@@ -102,7 +140,7 @@ int main(void) {
             WHITE
         );
 
-        DrawFPS(0, 0);
+        /*DrawFPS(0, 0);*/
         EndDrawing();
     }
 
