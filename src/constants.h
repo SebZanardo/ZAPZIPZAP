@@ -6,10 +6,17 @@
 #define WINDOW_WIDTH 320
 #define WINDOW_HEIGHT 200
 #define CELL_SIZE 8
+#define HALF_CELL (CELL_SIZE / 2)
 
+// +1 - 2 So scrolling looks seamless and taking into account UI bars
 #define GRID_WIDTH (WINDOW_WIDTH / CELL_SIZE - 1)
+// +1 So scrolling looks seamless
 #define GRID_HEIGHT (WINDOW_HEIGHT / CELL_SIZE + 1)
 #define GRID_CELLS (GRID_WIDTH * GRID_HEIGHT)
+
+#define TRAIL_WIDTH (GRID_WIDTH * 2)
+#define TRAIL_HEIGHT (GRID_HEIGHT * 2)
+#define TRAIL_CELLS (TRAIL_WIDTH * TRAIL_HEIGHT)
 
 #define WINDOW_CAPTION "ZAPZIPZAP"
 #define FPS 60
@@ -38,8 +45,12 @@
 
 // Ordering of characters in spritesheet
 typedef enum {
-    C64_FORWARD,
     C64_BACKWARD,
+    C64_FORWARD,
+    C64_TRAIL_NE,
+    C64_TRAIL_SE,
+    C64_TRAIL_SW,
+    C64_TRAIL_NW,
     C64_PLAYER,
     C64_BOLT,
     C64_TROPHY,

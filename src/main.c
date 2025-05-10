@@ -1,3 +1,4 @@
+/*#include <stdio.h>*/
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -28,12 +29,16 @@ int main(void) {
     WindowParameters window;
     handle_resize(&window);
 
-    // +1 So scrolling looks seamless
-    WALL_STATE grid[GRID_CELLS];
-
     // Random starting maze
+    WALL_STATE grid[GRID_CELLS];
     for (int i = 0; i < GRID_CELLS; i++) {
         grid[i] = GetRandomValue(0, 1) + 1;
+    }
+
+    // Empty trail
+    MOVE_DIRECTION trail[TRAIL_CELLS];
+    for (int i = 0; i < TRAIL_CELLS; i++) {
+        trail[i] = NO_DIRECTION;
     }
 
     RenderTexture2D target = LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -42,8 +47,10 @@ int main(void) {
     Vector2 pos = (Vector2) {0, 0};
     Rectangle char_rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
 
-    int player_x = 20;
-    int player_y = 12;
+    // NOTE: Both must be even or both must be odd!
+    int px = 37;
+    int py = 25;
+
     int BOUNDS_X = GRID_WIDTH * 2;
     int BOUNDS_Y = GRID_HEIGHT * 2;
 
@@ -51,7 +58,7 @@ int main(void) {
     uint32_t score = 0;
     uint32_t highscore = 360;
     char highscore_name[NAME_LEN] = {C64_S, C64_E, C64_B};
-    int zaps = 10;
+    int zaps = 100;
     int zap_cooldown = 10;
     int zap_cooldown_counter = 0;
     int steps = 0;
@@ -65,46 +72,73 @@ int main(void) {
         steps = 0;
         if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_Z)) {
             last_move = SOUTH_WEST;
-            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_FORWARD) {
-                if (player_x < 0 || player_y > BOUNDS_Y) break;
-                player_x--;
-                player_y++;
+            while (1) {
+                if (px < 0 || py > BOUNDS_Y) break;
+                if (grid[new_player_position(px, py, last_move)] == WALL_BACKWARD) break;
+                if (trail[(py+1) * TRAIL_WIDTH + (px-1)] != NO_DIRECTION) {
+                    last_move = NO_DIRECTION;
+                    break;
+                }
+                px--;
+                py++;
+                trail[py * TRAIL_WIDTH + px] = last_move;
                 steps++;
             }
-        } else if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_R)) {
+        } else if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_P)) {
             last_move = NORTH_EAST;
-            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_FORWARD) {
-                if (player_x > BOUNDS_X || player_y < 0) break;
-                player_x++;
-                player_y--;
+            while (1) {
+                if (px > BOUNDS_X || py < 0) break;
+                if (grid[new_player_position(px, py, last_move)] == WALL_BACKWARD) break;
+                if (trail[(py-1) * TRAIL_WIDTH + (px+1)] != NO_DIRECTION) {
+                    last_move = NO_DIRECTION;
+                    break;
+                }
+                px++;
+                py--;
+                trail[py * TRAIL_WIDTH + px] = last_move;
                 steps++;
             }
-        } else if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+        } else if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_Q)) {
             last_move = NORTH_WEST;
-            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_BACKWARD) {
-                if (player_x < 0 || player_y < 0) break;
-                player_x--;
-                player_y--;
+            while (1) {
+                if (px < 0 || py < 0) break;
+                if (grid[new_player_position(px, py, last_move)] == WALL_FORWARD) break;
+                if (trail[(py-1) * TRAIL_WIDTH + (px-1)] != NO_DIRECTION) {
+                    last_move = NO_DIRECTION;
+                    break;
+                }
+                px--;
+                py--;
+                trail[py * TRAIL_WIDTH + px] = last_move;
                 steps++;
             }
-        } else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_C)) {
+        } else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_COMMA)) {
             last_move = SOUTH_EAST;
-            while (grid[new_player_position(player_x, player_y, last_move)] != WALL_BACKWARD) {
-                if (player_x > BOUNDS_X || player_y > BOUNDS_Y) break;
-                player_x++;
-                player_y++;
+            while (1) {
+                if (px > BOUNDS_X || py > BOUNDS_Y) break;
+                if (grid[new_player_position(px, py, last_move)] == WALL_FORWARD) break;
+                if (trail[(py+1) * TRAIL_WIDTH + (px+1)] != NO_DIRECTION) {
+                    last_move = NO_DIRECTION;
+                    break;
+                }
+                px++;
+                py++;
+                trail[py * TRAIL_WIDTH + px] = last_move;
                 steps++;
             }
         } else {
             moved = false;
         }
 
-
         // UPDATE
-        if (moved && steps == 0 && zaps > 0) {
-            zap_cooldown_counter = zap_cooldown;
-            grid[new_player_position(player_x, player_y, last_move)] = WALL_BROKEN;
-            zaps--;
+        if (moved) {
+            if (last_move == NO_DIRECTION) {
+                // NOTE: Hit into tail
+            } else if (steps == 0 && zaps > 0) {
+                zap_cooldown_counter = zap_cooldown;
+                grid[new_player_position(px, py, last_move)] = WALL_BROKEN;
+                zaps--;
+            }
         }
 
         if (zap_cooldown_counter > 0) {
@@ -122,9 +156,8 @@ int main(void) {
                 pos.x = x * CELL_SIZE + CELL_SIZE;
                 pos.y = y * CELL_SIZE;
 
-                if (grid[y * GRID_WIDTH + x] == WALL_BROKEN) {
-                    continue;
-                }
+                if (grid[y * GRID_WIDTH + x] == WALL_BROKEN) continue;
+
                 char_rect.x = C64_BACKWARD * CELL_SIZE;
                 if (grid[y * GRID_WIDTH + x] == WALL_FORWARD) {
                     char_rect.x = C64_FORWARD * CELL_SIZE;
@@ -134,14 +167,23 @@ int main(void) {
             }
         }
 
-        int render_x = player_x * 0.5f * CELL_SIZE + CELL_SIZE + 4;
-        int render_y = player_y * 0.5f * CELL_SIZE;
-        DrawCircle(
-            render_x,
-            render_y,
-            2,
-            zap_cooldown_counter > 0 ? C64_YELLOW : C64_WHITE
-        );
+        for (int y = 0; y < TRAIL_HEIGHT; y++) {
+            for (int x = 0; x < TRAIL_WIDTH; x++) {
+                pos.x = (int)(x * HALF_CELL + CELL_SIZE);
+                pos.y = (int)(y * HALF_CELL - HALF_CELL);
+
+                MOVE_DIRECTION dir = trail[y * TRAIL_WIDTH + x];
+                if (dir == NO_DIRECTION) continue;
+
+                char_rect.x = (dir - 1 + C64_TRAIL_NE) * CELL_SIZE;
+                DrawTextureRec(spritesheet, char_rect, pos, C64_WHITE);
+            }
+        }
+
+        pos.x = (int)(px * HALF_CELL + CELL_SIZE);
+        pos.y = (int)(py * HALF_CELL - HALF_CELL);
+        char_rect.x = C64_PLAYER * CELL_SIZE;
+        DrawTextureRec(spritesheet, char_rect, pos, zap_cooldown_counter > 0 ? C64_YELLOW : C64_WHITE);
 
         // To cover scrolling maze
         DrawRectangle(0, 0, CELL_SIZE, WINDOW_HEIGHT, C64_BLUE);
@@ -198,6 +240,7 @@ int main(void) {
 
         EndTextureMode();
 
+        // Upscaling render target to window
         BeginDrawing();
         ClearBackground(C64_LIGHT_BLUE);
 
@@ -255,6 +298,6 @@ int new_player_position(int x, int y, MOVE_DIRECTION dir) {
         case NORTH_WEST:
             return (int)((y - 1) / 2) * GRID_WIDTH + (int)(x / 2);
     }
-    assert (dir != NO_DIRECTION);
+    assert(true == false);
     return -1;
 }
