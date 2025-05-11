@@ -23,6 +23,7 @@
 
 #define NAME_LEN 3
 #define SCORE_LEN 8
+#define LUCK 16
 
 // C64 colours
 // Colour names from here: https://sta.c64.org/cbm64col.html
@@ -52,6 +53,7 @@ typedef enum {
     C64_TRAIL_SW,
     C64_TRAIL_NW,
     C64_PLAYER,
+    C64_COLLECTIBLE,
     C64_BOLT,
     C64_TROPHY,
     C64_0,
