@@ -7,10 +7,11 @@
 
 
 typedef struct {
-    int screen_width; int screen_height;
-    int scale;
-    int offset_x;
-    int offset_y;
+    float screen_width;
+    float screen_height;
+    float scale;
+    float offset_x;
+    float offset_y;
 } WindowParameters;
 
 
@@ -20,8 +21,7 @@ int new_player_position(int x, int y, MOVE_DIRECTION dir);
 
 
 int main(void) {
-    Image icon = LoadImage("src/resources/icon.png");
-    SetWindowIcon(icon);
+// INITIALISATION //////////////////////////////////////////////////////////////
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_CAPTION);
     SetWindowMinSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -29,6 +29,8 @@ int main(void) {
     SetRandomSeed(0);
     HideCursor();
 
+    Image icon = LoadImage("src/resources/icon.png");
+    SetWindowIcon(icon);
 
     WindowParameters window;
     handle_resize(&window);
@@ -39,7 +41,7 @@ int main(void) {
         grid[i] = GetRandomValue(0, 1) + 1;
     }
 
-    // NOTE: Both must be even or both must be odd!
+    // NOTE: Both must be even or both must be odd! (37,25) is centre
     int px = 37;
     int py = 25;
 
@@ -76,10 +78,12 @@ int main(void) {
     int new_index = 0;
     bool moved = false;
 
+// GAME LOOP ///////////////////////////////////////////////////////////////////
     while (!WindowShouldClose()) {
+        // PRE-UPDATE //////////////////////////////////////////////////////////
         if (IsWindowResized()) handle_resize(&window);
 
-        // INPUT
+        // INPUT ///////////////////////////////////////////////////////////////
         moved = true;
         steps = 0;
         if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_Z)) {
@@ -150,10 +154,10 @@ int main(void) {
             moved = false;
         }
 
-        // UPDATE
+        // UPDATE //////////////////////////////////////////////////////////////
         if (moved) {
             if (last_move == NO_DIRECTION) {
-                // NOTE: Hit into tail
+                // NOTE: Hit into trail
             } else if (steps == 0 && zaps > 0) {
                 zap_cooldown_counter = zap_cooldown;
                 grid[new_player_position(px, py, last_move)] = WALL_BROKEN;
@@ -167,7 +171,7 @@ int main(void) {
 
         score++;
 
-        // RENDER
+        // RENDER //////////////////////////////////////////////////////////////
         BeginTextureMode(target);
         ClearBackground(C64_BLUE);
 
@@ -292,7 +296,7 @@ int main(void) {
         EndDrawing();
     }
 
-    // DEINITIALISE
+    // DEINITIALISE ////////////////////////////////////////////////////////////
     UnloadImage(icon);
     UnloadTexture(spritesheet);
 
