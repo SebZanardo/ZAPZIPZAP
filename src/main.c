@@ -60,7 +60,7 @@ int main(void) {
 
     RenderTexture2D target = LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT);
 
-    Texture2D spritesheet = LoadTexture("src/resources/spritesheet.png");
+    Texture2D spritesheet = LoadTexture("src/resources/fontsheet.png");
     Vector2 pos = (Vector2) {0, 0};
     Rectangle char_rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
 

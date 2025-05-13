@@ -92,6 +92,10 @@ typedef enum {
     C64_X,
     C64_Y,
     C64_Z,
+    C64_EXCLAMATION,
+    C64_COLON,
+    C64_APOSTROPHE,
+    C64_SOLID,
 } C64_CHARACTER;
 
 typedef enum {
