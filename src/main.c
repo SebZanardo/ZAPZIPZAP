@@ -20,12 +20,15 @@ int new_player_position(int x, int y, MOVE_DIRECTION dir);
 
 
 int main(void) {
+    Image icon = LoadImage("src/resources/icon.png");
+    SetWindowIcon(icon);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_CAPTION);
     SetWindowMinSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     SetTargetFPS(FPS);
     SetRandomSeed(0);
     HideCursor();
+
 
     WindowParameters window;
     handle_resize(&window);
@@ -290,7 +293,9 @@ int main(void) {
     }
 
     // DEINITIALISE
+    UnloadImage(icon);
     UnloadTexture(spritesheet);
+
     CloseWindow();
 }
 
