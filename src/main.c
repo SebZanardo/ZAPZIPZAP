@@ -1,7 +1,7 @@
 /*#include <stdio.h>*/
+/*#include <assert.h>*/
 #include <stdint.h>
 #include <stdbool.h>
-#include <assert.h>
 #include "raylib.h"
 #include "constants.h"
 
@@ -24,32 +24,51 @@ bool should_stop_zip(int x, int y, MOVE_DIRECTION dir);
 // GLOBALS /////////////////////////////////////////////////////////////////////
 WindowParameters window;
 WALL_STATE grid[GRID_CELLS];
+
+// TODO: Would be good to make these only GRID_CELLS in length for easy scroll
 MOVE_DIRECTION trail[TRAIL_CELLS];
 bool collectibles[TRAIL_CELLS];
 
 int BOUNDS_X = (GRID_WIDTH - 1) * 2;
 int BOUNDS_Y = (GRID_HEIGHT - 1) * 2;
 
-bool scroll = false;
+bool is_action_mode = true;
 
 // TODO: Load from web
 uint32_t highscore = 360;
 char highscore_name[NAME_LEN] = {C64_S, C64_E, C64_B};
 
 uint32_t score = 0;
+uint32_t ticks = 0;
+
+int row_index = 0; // Points to the first row to be rendered
+int scroll_x = 0;
+int scroll_y = 0;
+
+// NOTE: Both must be even or both must be odd! (37,25) is centre.
+// TODO: Would be good to change to proper x, y system...
+int px = 37;
+int py = 25;
+int zaps = GRID_HEIGHT - 1;
 
 
 int main(void) {
-// INITIALISATION //////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    // INITIALISATION //////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_CAPTION);
     SetWindowMinSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     SetTargetFPS(FPS);
+
+    // TODO: Get seed from day
     SetRandomSeed(0);
 
+    RenderTexture2D target = LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT);
+    Texture2D spritesheet = LoadTexture("src/resources/fontsheet.png");
     Image icon = LoadImage("src/resources/icon.png");
-    SetWindowIcon(icon);
 
+    SetWindowIcon(icon);
     handle_resize();
 
     // Random starting maze
@@ -57,37 +76,31 @@ int main(void) {
         grid[i] = GetRandomValue(0, 1) + 1;
     }
 
-    // NOTE: Both must be even or both must be odd! (37,25) is centre
-    int px = 37;
-    int py = 25;
-
     // Setup trail and collectibles
-    for (int y = 0; y < TRAIL_HEIGHT; y++) {
-        for (int x = 0; x < TRAIL_WIDTH; x++) {
-            trail[y * TRAIL_WIDTH + x] = NO_DIRECTION;
-            if (x == px && y == py) continue;
-            if (GetRandomValue(0, LUCK) != 0) continue;
-            collectibles[y * TRAIL_WIDTH + x] = x % 2 == y % 2;
-        }
-    }
+    /*for (int y = 0; y < TRAIL_HEIGHT; y++) {*/
+    /*    for (int x = 0; x < TRAIL_WIDTH; x++) {*/
+    /*        trail[y * TRAIL_WIDTH + x] = NO_DIRECTION;*/
+    /*        if (x == px && y == py) continue;*/
+    /*        if (GetRandomValue(0, LUCK) != 0) continue;*/
+    /*        collectibles[y * TRAIL_WIDTH + x] = x % 2 == y % 2;*/
+    /*    }*/
+    /*}*/
 
-    RenderTexture2D target = LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT);
-
-    Texture2D spritesheet = LoadTexture("src/resources/fontsheet.png");
     Vector2 pos = (Vector2) {0, 0};
     Rectangle char_rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
 
-
     MOVE_DIRECTION direction = NO_DIRECTION;
-    int zaps = 3;
     int zap_cooldown = 10;
     int zap_cooldown_counter = 0;
     int steps = 0;
     int new_index = 0;
-    int ox;
-    int oy;
+    int ox = 0;
+    int oy = 0;
 
-// GAME LOOP ///////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // GAME LOOP ///////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     while (!WindowShouldClose()) {
         // PRE-UPDATE //////////////////////////////////////////////////////////
         if (IsWindowResized()) handle_resize();
@@ -118,15 +131,15 @@ int main(void) {
             // ZIP
             while (1) {
                 if (should_stop_zip(px, py, direction)) break;
-                new_index = (py + oy) * TRAIL_WIDTH + (px + ox);
-                if (trail[new_index] != NO_DIRECTION) {
-                    // NOTE: Hit into trail
-                    break;
-                }
-                check_for_collectible(new_index, &zaps);
+                /*new_index = (py + oy) * TRAIL_WIDTH + (px + ox);*/
+                /*if (trail[new_index] != NO_DIRECTION) {*/
+                /*    // NOTE: Hit into trail*/
+                /*    break;*/
+                /*}*/
+                /*check_for_collectible(new_index, &zaps);*/
+                /*trail[py * TRAIL_WIDTH + px] = direction;*/
                 px += ox;
                 py += oy;
-                trail[py * TRAIL_WIDTH + px] = direction;
                 steps++;
             }
 
@@ -142,25 +155,50 @@ int main(void) {
             zap_cooldown_counter--;
         }
 
-        if (scroll) {
+        if (is_action_mode) {
             score++;
+
+            /*scroll_x++;*/
+            /*if (scroll_x >= CELL_SIZE) {*/
+            /*    // TODO: New maze column*/
+            /*    scroll_x = 0;*/
+            /*}*/
+
+            if (ticks % 4 == 0) {
+                scroll_y++;
+            }
+            if (scroll_y >= CELL_SIZE) {
+                // TODO: New maze row
+                for (int x = 0; x < GRID_WIDTH; x++) {
+                    grid[row_index * GRID_WIDTH + x] = GetRandomValue(0, 1) + 1;
+                }
+                row_index++;
+                if (row_index >= GRID_HEIGHT) {
+                    row_index = 0;
+                }
+                scroll_y = 0;
+                py -= 2;
+            }
         } else {
             score += steps;
         }
 
         // RENDER //////////////////////////////////////////////////////////////
         BeginTextureMode(target);
+
         ClearBackground(C64_BLUE);
 
+        // Maze
         for (int y = 0; y < GRID_HEIGHT; y++) {
             for (int x = 0; x < GRID_WIDTH; x++) {
-                pos.x = x * CELL_SIZE + CELL_SIZE;
-                pos.y = y * CELL_SIZE;
+                pos.x = x * CELL_SIZE + CELL_SIZE - scroll_x;
+                pos.y = y * CELL_SIZE - scroll_y;
 
-                if (grid[y * GRID_WIDTH + x] == WALL_BROKEN) continue;
+                new_index = ((row_index + y) % GRID_HEIGHT) * GRID_WIDTH + x;
+                if (grid[new_index] == WALL_BROKEN) continue;
 
                 char_rect.x = C64_BACKWARD * CELL_SIZE;
-                if (grid[y * GRID_WIDTH + x] == WALL_FORWARD) {
+                if (grid[new_index] == WALL_FORWARD) {
                     char_rect.x = C64_FORWARD * CELL_SIZE;
                 }
 
@@ -168,39 +206,42 @@ int main(void) {
             }
         }
 
-        for (int y = 0; y < TRAIL_HEIGHT; y++) {
-            for (int x = 0; x < TRAIL_WIDTH; x++) {
-                pos.x = (int)(x * HALF_CELL + CELL_SIZE);
-                pos.y = (int)(y * HALF_CELL - HALF_CELL);
+        // Trail and collectibles
+        /*for (int y = 0; y < TRAIL_HEIGHT; y++) {*/
+        /*    for (int x = 0; x < TRAIL_WIDTH; x++) {*/
+        /*        pos.x = x * HALF_CELL + CELL_SIZE - scroll_x;*/
+        /*        pos.y = y * HALF_CELL - HALF_CELL - scroll_y;*/
+        /**/
+        /*        new_index = y * TRAIL_WIDTH + x;*/
+        /*        if (trail[new_index] != NO_DIRECTION) {*/
+        /*            char_rect.x = (trail[new_index] - 1 + C64_TRAIL_NE) * CELL_SIZE;*/
+        /*            DrawTextureRec(spritesheet, char_rect, pos, C64_LIGHT_GREY);*/
+        /*        }*/
+        /**/
+        /*        char_rect.x = C64_COLLECTIBLE * CELL_SIZE;*/
+        /*        if (collectibles[new_index]) {*/
+        /*            DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);*/
+        /*        }*/
+        /*    }*/
+        /*}*/
 
-                MOVE_DIRECTION dir = trail[y * TRAIL_WIDTH + x];
-                if (dir != NO_DIRECTION) {
-                    char_rect.x = (dir - 1 + C64_TRAIL_NE) * CELL_SIZE;
-                    DrawTextureRec(spritesheet, char_rect, pos, C64_LIGHT_GREY);
-                }
-
-                char_rect.x = C64_COLLECTIBLE * CELL_SIZE;
-                if (collectibles[y * TRAIL_WIDTH + x]) {
-                    DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
-                }
-            }
-        }
-
-        pos.x = (int)(px * HALF_CELL + CELL_SIZE);
-        pos.y = (int)(py * HALF_CELL - HALF_CELL);
+        // Player
+        pos.x = px * HALF_CELL + CELL_SIZE - scroll_x;
+        pos.y = py * HALF_CELL - HALF_CELL - scroll_y;
         char_rect.x = C64_PLAYER * CELL_SIZE;
         DrawTextureRec(spritesheet, char_rect, pos, zap_cooldown_counter > 0 ? C64_YELLOW : C64_WHITE);
 
-        // To cover scrolling maze
+        // To cover scrolling maze and for UI
         DrawRectangle(0, 0, CELL_SIZE, WINDOW_HEIGHT, C64_BLUE);
         DrawRectangle(WINDOW_WIDTH - CELL_SIZE, 0, CELL_SIZE, WINDOW_HEIGHT, C64_BLUE);
 
         // Zaps left
         char_rect.x = C64_BOLT * CELL_SIZE;
         pos.x = WINDOW_WIDTH - CELL_SIZE;
+        pos.y = 0;
         for (int i = 0; i < zaps; i++) {
-            pos.y = i * CELL_SIZE;
             DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+            pos.y += CELL_SIZE;
         }
 
         // Score
@@ -212,8 +253,6 @@ int main(void) {
             pos.y += CELL_SIZE;
         }
 
-        pos.y += CELL_SIZE; // GAP
-
         // Highscore
         pos.y = CELL_SIZE * 11;
         int div = 1;
@@ -223,16 +262,15 @@ int main(void) {
             pos.y -= CELL_SIZE;
             div *= 10;
         }
-        pos.y = CELL_SIZE * 12;
 
-        pos.y += CELL_SIZE * 2; // GAP * 2
+        // Trophy
+        pos.y = CELL_SIZE * 14;
         if (score > highscore) {
             char_rect.x = C64_TROPHY * CELL_SIZE;
             DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
         } else {
             pos.y += CELL_SIZE; // GAP
         }
-        pos.y += CELL_SIZE * 2; // GAP * 2
 
         // Current score
         pos.y = CELL_SIZE * 24;
@@ -271,9 +309,14 @@ int main(void) {
 
         /*DrawFPS(0, 0);*/
         EndDrawing();
+
+        // POST-UPDATE /////////////////////////////////////////////////////////
+        ticks++;
     }
 
-    // DEINITIALISE ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    // DEINITIALISATION ////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     UnloadImage(icon);
     UnloadTexture(spritesheet);
 
@@ -295,11 +338,11 @@ void handle_resize() {
 
 void check_for_collectible(int new_index, int *zaps) {
     if (collectibles[new_index]) {
+        // NOTE: Collected zap
         collectibles[new_index] = false;
         (*zaps)++;
         *zaps = MIN(*zaps, GRID_HEIGHT - 1);
         score += ZAP_BONUS_SCORE;
-        // NOTE: Collected zap
     }
 }
 
@@ -309,13 +352,13 @@ int player_index(int x, int y, MOVE_DIRECTION dir) {
         case NO_DIRECTION:
             break;
         case NORTH_EAST:
-            return (int)((y - 1) / 2) * GRID_WIDTH + (int)((x + 1) / 2);
+            return ((int)((y - 1) / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)((x + 1) / 2);
         case SOUTH_EAST:
-            return (int)(y / 2) * GRID_WIDTH + (int)((x + 1) / 2);
+            return ((int)(y / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)((x + 1) / 2);
         case SOUTH_WEST:
-            return (int)(y / 2) * GRID_WIDTH + (int)(x / 2);
+            return ((int)(y / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)(x / 2);
         case NORTH_WEST:
-            return (int)((y - 1) / 2) * GRID_WIDTH + (int)(x / 2);
+            return ((int)((y - 1) / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)(x / 2);
     }
     return -1;
 }

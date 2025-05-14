@@ -6,7 +6,7 @@
 #define WINDOW_WIDTH 320
 #define WINDOW_HEIGHT 200
 #define CELL_SIZE 8
-#define HALF_CELL (CELL_SIZE / 2)
+#define HALF_CELL (int)(CELL_SIZE / 2)
 
 // +1 - 2 So scrolling looks seamless and taking into account UI bars
 #define GRID_WIDTH (WINDOW_WIDTH / CELL_SIZE - 1)
