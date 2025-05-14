@@ -27,6 +27,9 @@
 
 #define ZAP_BONUS_SCORE 100
 
+#define SCROLL_FASTEST 4
+#define SCROLL_SLOWEST 8
+
 // C64 colours
 // Colour names from here: https://sta.c64.org/cbm64col.html
 #define C64_BLACK (Color) {0, 0, 0, 255}
@@ -113,3 +116,10 @@ typedef enum {
     SOUTH_WEST,
     NORTH_WEST,
 } MOVE_DIRECTION;
+
+typedef enum {
+    NORTH,
+    EAST,
+    SOUTH,
+    WEST,
+} SCROLL_DIRECTION;

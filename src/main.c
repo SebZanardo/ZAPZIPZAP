@@ -16,7 +16,7 @@ typedef struct {
 
 
 void handle_resize();
-void check_for_collectible(int new_index, int *zaps);
+void check_for_collectible(int new_index);
 int player_index(int x, int y, MOVE_DIRECTION dir);
 bool should_stop_zip(int x, int y, MOVE_DIRECTION dir);
 
@@ -29,8 +29,8 @@ WALL_STATE grid[GRID_CELLS];
 MOVE_DIRECTION trail[TRAIL_CELLS];
 bool collectibles[TRAIL_CELLS];
 
-int BOUNDS_X = (GRID_WIDTH - 1) * 2;
-int BOUNDS_Y = (GRID_HEIGHT - 1) * 2;
+int BOUNDS_X = (GRID_WIDTH - 2) * 2;
+int BOUNDS_Y = (GRID_HEIGHT - 2) * 2;
 
 bool is_action_mode = true;
 
@@ -40,16 +40,20 @@ char highscore_name[NAME_LEN] = {C64_S, C64_E, C64_B};
 
 uint32_t score = 0;
 uint32_t ticks = 0;
+bool gameover = false;
 
 int row_index = 0; // Points to the first row to be rendered
+SCROLL_DIRECTION scroll_dir = NORTH;
+int scroll_counter = 40;
 int scroll_x = 0;
 int scroll_y = 0;
+int scroll_speed = 4;
 
 // NOTE: Both must be even or both must be odd! (37,25) is centre.
 // TODO: Would be good to change to proper x, y system...
 int px = 37;
 int py = 25;
-int zaps = GRID_HEIGHT - 1;
+int zaps = 100;
 
 
 int main(void) {
@@ -104,6 +108,9 @@ int main(void) {
     while (!WindowShouldClose()) {
         // PRE-UPDATE //////////////////////////////////////////////////////////
         if (IsWindowResized()) handle_resize();
+        if (px < 0 || px > TRAIL_WIDTH || py < 0 || py > TRAIL_HEIGHT) {
+            gameover = true;
+        }
 
         // INPUT ///////////////////////////////////////////////////////////////
         direction = NO_DIRECTION;
@@ -126,61 +133,87 @@ int main(void) {
         }
 
         // UPDATE //////////////////////////////////////////////////////////////
-        steps = 0;
-        if (direction != NO_DIRECTION) {
-            // ZIP
-            while (1) {
-                if (should_stop_zip(px, py, direction)) break;
-                /*new_index = (py + oy) * TRAIL_WIDTH + (px + ox);*/
-                /*if (trail[new_index] != NO_DIRECTION) {*/
-                /*    // NOTE: Hit into trail*/
-                /*    break;*/
-                /*}*/
-                /*check_for_collectible(new_index, &zaps);*/
-                /*trail[py * TRAIL_WIDTH + px] = direction;*/
-                px += ox;
-                py += oy;
-                steps++;
-            }
-
-            // ZAP
-            if (steps == 0 && zaps > 0) {
-                zap_cooldown_counter = zap_cooldown;
-                grid[player_index(px, py, direction)] = WALL_BROKEN;
-                zaps--;
-            }
-        }
-
-        if (zap_cooldown_counter > 0) {
-            zap_cooldown_counter--;
-        }
-
-        if (is_action_mode) {
-            score++;
-
-            /*scroll_x++;*/
-            /*if (scroll_x >= CELL_SIZE) {*/
-            /*    // TODO: New maze column*/
-            /*    scroll_x = 0;*/
-            /*}*/
-
-            if (ticks % 4 == 0) {
-                scroll_y++;
-            }
-            if (scroll_y >= CELL_SIZE) {
-                // TODO: New maze row
-                for (int x = 0; x < GRID_WIDTH; x++) {
-                    grid[row_index * GRID_WIDTH + x] = GetRandomValue(0, 1) + 1;
+        if (!gameover) {
+            steps = 0;
+            if (direction != NO_DIRECTION) {
+                // ZIP
+                while (1) {
+                    if (should_stop_zip(px, py, direction)) break;
+                    /*new_index = (py + oy) * TRAIL_WIDTH + (px + ox);*/
+                    /*if (trail[new_index] != NO_DIRECTION) {*/
+                    /*    // NOTE: Hit into trail*/
+                    /*    break;*/
+                    /*}*/
+                    /*check_for_collectible(new_index, &zaps);*/
+                    /*trail[py * TRAIL_WIDTH + px] = direction;*/
+                    px += ox;
+                    py += oy;
+                    steps++;
                 }
-                row_index++;
-                if (row_index >= GRID_HEIGHT) {
-                    row_index = 0;
+
+                // ZAP
+                if (steps == 0 && zaps > 0) {
+                    zap_cooldown_counter = zap_cooldown;
+                    grid[player_index(px, py, direction)] = WALL_BROKEN;
+                    zaps--;
                 }
-                scroll_y = 0;
-                py -= 2;
             }
-        } else {
-            score += steps;
+
+            if (zap_cooldown_counter > 0) {
+                zap_cooldown_counter--;
+            }
+
+            if (is_action_mode) {
+                score++;
+
+                if (ticks % scroll_speed == 0) {
+                    if (scroll_counter > 0) {
+                        if (scroll_dir == NORTH || scroll_dir == EAST) {
+                            scroll_y++;
+                            if (scroll_y >= CELL_SIZE) {
+                                // TODO: New maze row
+                                for (int x = 0; x < GRID_WIDTH; x++) {
+                                    grid[row_index * GRID_WIDTH + x] = GetRandomValue(0, 1) + 1;
+                                }
+
+                                row_index++;
+                                if (row_index >= GRID_HEIGHT) {
+                                    row_index = 0;
+                                }
+
+                                scroll_y = 0;
+                                py -= 2;
+                            }
+                        } else if (scroll_dir == SOUTH || scroll_dir == WEST) {
+                            scroll_y--;
+                            if (scroll_y < 0) {
+                                row_index--;
+
+                                if (row_index < 0) {
+                                    row_index = GRID_HEIGHT - 1;
+                                }
+
+                                // TODO: New maze row
+                                for (int x = 0; x < GRID_WIDTH; x++) {
+                                    grid[row_index * GRID_WIDTH + x] = GetRandomValue(0, 1) + 1;
+                                }
+
+                                scroll_y = CELL_SIZE;
+                                py += 2;
+                            }
+                        }
+                    } else {
+                        // Pick new random scroll direction
+                        scroll_dir = GetRandomValue(0, 3);
+
+                        // Pick new random scroll counter
+                        scroll_counter = CELL_SIZE * GetRandomValue(10, 20);
+                    }
+                    scroll_counter--;
+                }
+            } else {
+                score += steps;
+            }
         }
 
         // RENDER //////////////////////////////////////////////////////////////
@@ -336,12 +369,12 @@ void handle_resize() {
 }
 
 
-void check_for_collectible(int new_index, int *zaps) {
+void check_for_collectible(int new_index) {
     if (collectibles[new_index]) {
         // NOTE: Collected zap
         collectibles[new_index] = false;
-        (*zaps)++;
-        *zaps = MIN(*zaps, GRID_HEIGHT - 1);
+        zaps++;
+        zaps = MIN(zaps, GRID_HEIGHT - 1);
         score += ZAP_BONUS_SCORE;
     }
 }
