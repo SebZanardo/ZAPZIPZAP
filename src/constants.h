@@ -25,6 +25,8 @@
 #define SCORE_LEN 8
 #define LUCK 16
 
+#define ZAP_BONUS_SCORE 100
+
 // C64 colours
 // Colour names from here: https://sta.c64.org/cbm64col.html
 #define C64_BLACK (Color) {0, 0, 0, 255}

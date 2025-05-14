@@ -15,9 +15,28 @@ typedef struct {
 } WindowParameters;
 
 
-void handle_resize(WindowParameters *window);
-void check_for_collectible(bool collectibles[TRAIL_CELLS], int new_index, int *zaps);
-int new_player_position(int x, int y, MOVE_DIRECTION dir);
+void handle_resize();
+void check_for_collectible(int new_index, int *zaps);
+int player_index(int x, int y, MOVE_DIRECTION dir);
+bool should_stop_zip(int x, int y, MOVE_DIRECTION dir);
+
+
+// GLOBALS /////////////////////////////////////////////////////////////////////
+WindowParameters window;
+WALL_STATE grid[GRID_CELLS];
+MOVE_DIRECTION trail[TRAIL_CELLS];
+bool collectibles[TRAIL_CELLS];
+
+int BOUNDS_X = (GRID_WIDTH - 1) * 2;
+int BOUNDS_Y = (GRID_HEIGHT - 1) * 2;
+
+bool scroll = false;
+
+// TODO: Load from web
+uint32_t highscore = 360;
+char highscore_name[NAME_LEN] = {C64_S, C64_E, C64_B};
+
+uint32_t score = 0;
 
 
 int main(void) {
@@ -27,16 +46,13 @@ int main(void) {
     SetWindowMinSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     SetTargetFPS(FPS);
     SetRandomSeed(0);
-    HideCursor();
 
     Image icon = LoadImage("src/resources/icon.png");
     SetWindowIcon(icon);
 
-    WindowParameters window;
-    handle_resize(&window);
+    handle_resize();
 
     // Random starting maze
-    WALL_STATE grid[GRID_CELLS];
     for (int i = 0; i < GRID_CELLS; i++) {
         grid[i] = GetRandomValue(0, 1) + 1;
     }
@@ -46,9 +62,6 @@ int main(void) {
     int py = 25;
 
     // Setup trail and collectibles
-    MOVE_DIRECTION trail[TRAIL_CELLS];
-    bool collectibles[TRAIL_CELLS];
-
     for (int y = 0; y < TRAIL_HEIGHT; y++) {
         for (int x = 0; x < TRAIL_WIDTH; x++) {
             trail[y * TRAIL_WIDTH + x] = NO_DIRECTION;
@@ -64,103 +77,63 @@ int main(void) {
     Vector2 pos = (Vector2) {0, 0};
     Rectangle char_rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
 
-    int BOUNDS_X = GRID_WIDTH * 2;
-    int BOUNDS_Y = GRID_HEIGHT * 2;
 
-    MOVE_DIRECTION last_move = NO_DIRECTION;
-    uint32_t score = 0;
-    uint32_t highscore = 360;
-    char highscore_name[NAME_LEN] = {C64_S, C64_E, C64_B};
+    MOVE_DIRECTION direction = NO_DIRECTION;
     int zaps = 3;
     int zap_cooldown = 10;
     int zap_cooldown_counter = 0;
     int steps = 0;
     int new_index = 0;
-    bool moved = false;
+    int ox;
+    int oy;
 
 // GAME LOOP ///////////////////////////////////////////////////////////////////
     while (!WindowShouldClose()) {
         // PRE-UPDATE //////////////////////////////////////////////////////////
-        if (IsWindowResized()) handle_resize(&window);
+        if (IsWindowResized()) handle_resize();
 
         // INPUT ///////////////////////////////////////////////////////////////
-        moved = true;
-        steps = 0;
+        direction = NO_DIRECTION;
         if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_Z)) {
-            last_move = SOUTH_WEST;
-            while (1) {
-                if (px <= 0 || py > BOUNDS_Y) break;
-                if (grid[new_player_position(px, py, last_move)] == WALL_BACKWARD) break;
-                new_index = (py+1) * TRAIL_WIDTH + (px-1);
-                if (trail[new_index] != NO_DIRECTION) {
-                    last_move = NO_DIRECTION;
-                    break;
-                }
-                check_for_collectible(collectibles, new_index, &zaps);
-                px--;
-                py++;
-                trail[py * TRAIL_WIDTH + px] = last_move;
-                steps++;
-            }
+            direction = SOUTH_WEST;
+            ox = -1;
+            oy = 1;
         } else if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_P)) {
-            last_move = NORTH_EAST;
-            while (1) {
-                if (px > BOUNDS_X || py <= 0) break;
-                if (grid[new_player_position(px, py, last_move)] == WALL_BACKWARD) break;
-                new_index = (py-1) * TRAIL_WIDTH + (px+1);
-                if (trail[new_index] != NO_DIRECTION) {
-                    last_move = NO_DIRECTION;
-                    break;
-                }
-                check_for_collectible(collectibles, new_index, &zaps);
-                px++;
-                py--;
-                trail[py * TRAIL_WIDTH + px] = last_move;
-                steps++;
-            }
+            direction = NORTH_EAST;
+            ox = 1;
+            oy = -1;
         } else if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_Q)) {
-            last_move = NORTH_WEST;
-            while (1) {
-                if (px <= 0 || py <= 0) break;
-                if (grid[new_player_position(px, py, last_move)] == WALL_FORWARD) break;
-                new_index = (py-1) * TRAIL_WIDTH + (px-1);
-                if (trail[new_index] != NO_DIRECTION) {
-                    last_move = NO_DIRECTION;
-                    break;
-                }
-                check_for_collectible(collectibles, new_index, &zaps);
-                px--;
-                py--;
-                trail[py * TRAIL_WIDTH + px] = last_move;
-                steps++;
-            }
+            direction = NORTH_WEST;
+            ox = -1;
+            oy = -1;
         } else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_COMMA)) {
-            last_move = SOUTH_EAST;
-            while (1) {
-                if (px > BOUNDS_X || py > BOUNDS_Y) break;
-                if (grid[new_player_position(px, py, last_move)] == WALL_FORWARD) break;
-                new_index = (py+1) * TRAIL_WIDTH + (px+1);
-                if (trail[new_index] != NO_DIRECTION) {
-                    last_move = NO_DIRECTION;
-                    break;
-                }
-                check_for_collectible(collectibles, new_index, &zaps);
-                px++;
-                py++;
-                trail[py * TRAIL_WIDTH + px] = last_move;
-                steps++;
-            }
-        } else {
-            moved = false;
+            direction = SOUTH_EAST;
+            ox = 1;
+            oy = 1;
         }
 
         // UPDATE //////////////////////////////////////////////////////////////
-        if (moved) {
-            if (last_move == NO_DIRECTION) {
-                // NOTE: Hit into trail
-            } else if (steps == 0 && zaps > 0) {
+        steps = 0;
+        if (direction != NO_DIRECTION) {
+            // ZIP
+            while (1) {
+                if (should_stop_zip(px, py, direction)) break;
+                new_index = (py + oy) * TRAIL_WIDTH + (px + ox);
+                if (trail[new_index] != NO_DIRECTION) {
+                    // NOTE: Hit into trail
+                    break;
+                }
+                check_for_collectible(new_index, &zaps);
+                px += ox;
+                py += oy;
+                trail[py * TRAIL_WIDTH + px] = direction;
+                steps++;
+            }
+
+            // ZAP
+            if (steps == 0 && zaps > 0) {
                 zap_cooldown_counter = zap_cooldown;
-                grid[new_player_position(px, py, last_move)] = WALL_BROKEN;
+                grid[player_index(px, py, direction)] = WALL_BROKEN;
                 zaps--;
             }
         }
@@ -169,7 +142,11 @@ int main(void) {
             zap_cooldown_counter--;
         }
 
-        score++;
+        if (scroll) {
+            score++;
+        } else {
+            score += steps;
+        }
 
         // RENDER //////////////////////////////////////////////////////////////
         BeginTextureMode(target);
@@ -304,28 +281,30 @@ int main(void) {
 }
 
 
-void handle_resize(WindowParameters *window) {
-    window->screen_width = GetScreenWidth();
-    window->screen_height = GetScreenHeight();
-    window->scale = MIN(
-        window->screen_width / WINDOW_WIDTH,
-        window->screen_height / WINDOW_HEIGHT
+void handle_resize() {
+    window.screen_width = GetScreenWidth();
+    window.screen_height = GetScreenHeight();
+    window.scale = MIN(
+        window.screen_width / WINDOW_WIDTH,
+        window.screen_height / WINDOW_HEIGHT
     );
-    window->offset_x = (window->screen_width - window->scale * WINDOW_WIDTH) / 2;
-    window->offset_y = (window->screen_height - window->scale * WINDOW_HEIGHT) / 2;
+    window.offset_x = (window.screen_width - window.scale * WINDOW_WIDTH) / 2;
+    window.offset_y = (window.screen_height - window.scale * WINDOW_HEIGHT) / 2;
 }
 
 
-void check_for_collectible(bool collectibles[TRAIL_CELLS], int new_index, int *zaps) {
+void check_for_collectible(int new_index, int *zaps) {
     if (collectibles[new_index]) {
         collectibles[new_index] = false;
         (*zaps)++;
         *zaps = MIN(*zaps, GRID_HEIGHT - 1);
+        score += ZAP_BONUS_SCORE;
+        // NOTE: Collected zap
     }
 }
 
 
-int new_player_position(int x, int y, MOVE_DIRECTION dir) {
+int player_index(int x, int y, MOVE_DIRECTION dir) {
     switch (dir) {
         case NO_DIRECTION:
             break;
@@ -338,6 +317,22 @@ int new_player_position(int x, int y, MOVE_DIRECTION dir) {
         case NORTH_WEST:
             return (int)((y - 1) / 2) * GRID_WIDTH + (int)(x / 2);
     }
-    assert(true == false);
     return -1;
+}
+
+
+bool should_stop_zip(int x, int y, MOVE_DIRECTION dir) {
+    switch (dir) {
+        case NO_DIRECTION:
+            break;
+        case SOUTH_WEST:
+            return x <= 0 || y >= BOUNDS_Y || grid[player_index(x, y, dir)] == WALL_BACKWARD;
+        case NORTH_EAST:
+            return x >= BOUNDS_X || y <= 0 || grid[player_index(x, y, dir)] == WALL_BACKWARD;
+        case NORTH_WEST:
+            return x <= 0 || y <= 0 || grid[player_index(x, y, dir)] == WALL_FORWARD;
+        case SOUTH_EAST:
+            return x >= BOUNDS_X || y >= BOUNDS_Y || grid[player_index(x, y, dir)] == WALL_FORWARD;
+    }
+    return true;
 }
