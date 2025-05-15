@@ -52,9 +52,9 @@ int scroll_y = 0;
 int scroll_speed = 4;
 
 // NOTE: Both must be even or both must be odd! (37,25) is centre.
-// TODO: Would be good to change to proper x, y system...
 int px = 37;
 int py = 25;
+
 int zaps = 3;
 
 
@@ -67,8 +67,11 @@ int main(void) {
     SetWindowMinSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     SetTargetFPS(FPS);
 
-    // TODO: Get seed from day
-    SetRandomSeed(0);
+    InitAudioDevice();
+    SetAudioStreamBufferSizeDefault(8192);
+    Music music = LoadMusicStream("src/resources/demo.mp3");
+    SetMusicVolume(music, MUSIC_VOLUME);
+    PlayMusicStream(music);
 
     RenderTexture2D target = LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT);
     Texture2D spritesheet = LoadTexture("src/resources/fontsheet.png");
@@ -76,6 +79,9 @@ int main(void) {
 
     SetWindowIcon(icon);
     handle_resize();
+
+    // TODO: Get random seed from local time day
+    SetRandomSeed(0);
 
     Vector2 pos = (Vector2) {0, 0};
     Rectangle char_rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
@@ -112,6 +118,7 @@ int main(void) {
     ////////////////////////////////////////////////////////////////////////////
     while (!WindowShouldClose()) {
         // PRE-UPDATE //////////////////////////////////////////////////////////
+        UpdateMusicStream(music);
         if (IsWindowResized()) handle_resize();
         if (px < 0 || px > TRAIL_WIDTH || py < 0 || py > TRAIL_HEIGHT) {
             gameover = true;
@@ -119,19 +126,35 @@ int main(void) {
 
         // INPUT ///////////////////////////////////////////////////////////////
         direction = NO_DIRECTION;
-        if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_Z)) {
+        if (
+            IsKeyPressed(KEY_LEFT) ||
+            IsKeyPressed(KEY_Z) ||
+            IsKeyPressed(KEY_A)
+        ) {
             direction = SOUTH_WEST;
             ox = -1;
             oy = 1;
-        } else if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_P)) {
+        } else if (
+            IsKeyPressed(KEY_RIGHT) ||
+            IsKeyPressed(KEY_O) ||
+            IsKeyPressed(KEY_D)
+        ) {
             direction = NORTH_EAST;
             ox = 1;
             oy = -1;
-        } else if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_Q)) {
+        } else if (
+            IsKeyPressed(KEY_UP) ||
+            IsKeyPressed(KEY_Q) ||
+            IsKeyPressed(KEY_W)
+        ) {
             direction = NORTH_WEST;
             ox = -1;
             oy = -1;
-        } else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_COMMA)) {
+        } else if (
+            IsKeyPressed(KEY_DOWN) ||
+            IsKeyPressed(KEY_M) ||
+            IsKeyPressed(KEY_S)
+        ) {
             direction = SOUTH_EAST;
             ox = 1;
             oy = 1;
@@ -146,7 +169,7 @@ int main(void) {
                     if (should_stop_zip(px, py, direction)) break;
                     new_index = ((py + oy + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + ox + col_index * 2) % TRAIL_WIDTH;
                     if (trail[new_index] != NO_DIRECTION) {
-                        // NOTE: Hit into trail
+                        // NOTE: Hit into trail (BONK)
                         direction = NO_DIRECTION;
                         break;
                     }
@@ -163,13 +186,15 @@ int main(void) {
                 if (steps == 0 && zaps > 0) {
                     new_index = player_index(px, py, direction);
                     if (grid[new_index] != WALL_BROKEN) {
-                        // NOTE: Broke wall
+                        // NOTE: Broke wall (DESTROY)
                         grid[new_index] = WALL_BROKEN;
                         zap_cooldown_counter = zap_cooldown;
                         zaps--;
                     } else {
-                        // NOTE: No wall to break
+                        // NOTE: No wall to break, edge of map/trail (BONK)
                     }
+                } else {
+                    // NOTE: (ZIP SOUND pick random pitch)
                 }
             }
             if (zap_cooldown_counter > 0) {
@@ -241,6 +266,7 @@ int main(void) {
                         // Pick new random scroll direction
                         // TODO: Do not pick same as current
                         scroll_dir = GetRandomValue(0, 3);
+                        // NOTE: PLAY NOTE depending on direction
 
                         // Pick new random scroll counter
                         scroll_counter = CELL_SIZE * GetRandomValue(SCROLL_MINIMUM, SCROLL_MAXIMUM);
@@ -288,8 +314,6 @@ int main(void) {
                     DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
                 }
 
-                /*pos.x += 2;*/
-                /*pos.y += 2;*/
                 if (trail[new_index] != NO_DIRECTION) {
                     char_rect.x = (trail[new_index] - 1 + C64_TRAIL_SW) * CELL_SIZE;
                     DrawTextureRec(spritesheet, char_rect, pos, C64_LIGHT_GREY);
@@ -340,8 +364,6 @@ int main(void) {
         if (score > highscore) {
             char_rect.x = C64_TROPHY * CELL_SIZE;
             DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
-        } else {
-            pos.y += CELL_SIZE; // GAP
         }
 
         // Current score
@@ -389,9 +411,11 @@ int main(void) {
     ////////////////////////////////////////////////////////////////////////////
     // DEINITIALISATION ////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
+    UnloadMusicStream(music);
     UnloadImage(icon);
     UnloadTexture(spritesheet);
 
+    CloseAudioDevice();
     CloseWindow();
 }
 

@@ -20,6 +20,7 @@
 
 #define WINDOW_CAPTION "ZAPZIPZAP"
 #define FPS 60
+#define MUSIC_VOLUME 0.6f
 
 #define NAME_LEN 3
 #define SCORE_LEN 8
