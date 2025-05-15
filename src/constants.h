@@ -31,7 +31,7 @@
 #define SCROLL_FASTEST 2
 #define SCROLL_SLOWEST 8
 #define SCROLL_MINIMUM 10
-#define SCROLL_MAXIMUM 20
+#define SCROLL_MAXIMUM 40
 
 // C64 colours
 // Colour names from here: https://sta.c64.org/cbm64col.html

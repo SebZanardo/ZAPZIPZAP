@@ -20,6 +20,7 @@ void check_for_collectible(int new_index);
 int player_index(int x, int y, MOVE_DIRECTION dir);
 bool should_stop_zip(int x, int y, MOVE_DIRECTION dir);
 void new_maze_row();
+void new_maze_col();
 
 
 // GLOBALS /////////////////////////////////////////////////////////////////////
@@ -31,9 +32,9 @@ MOVE_DIRECTION trail[TRAIL_CELLS];
 bool collectibles[TRAIL_CELLS];
 
 int BOUNDS_X = (GRID_WIDTH - 2) * 2;
-int BOUNDS_Y = (GRID_HEIGHT - 2) * 2;
+int BOUNDS_Y = (GRID_HEIGHT - 1) * 2;
 
-bool is_action_mode = true;
+bool is_action_mode = false;
 
 // TODO: Load from web
 uint32_t highscore = 360;
@@ -55,7 +56,7 @@ int scroll_speed = 4;
 int px = 37;
 int py = 25;
 
-int zaps = 3;
+int zaps = 300;
 
 
 int main(void) {
@@ -170,7 +171,6 @@ int main(void) {
                     new_index = ((py + oy + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + ox + col_index * 2) % TRAIL_WIDTH;
                     if (trail[new_index] != NO_DIRECTION) {
                         // NOTE: Hit into trail (BONK)
-                        direction = NO_DIRECTION;
                         break;
                     }
                     check_for_collectible(new_index);
@@ -182,21 +182,20 @@ int main(void) {
             }
 
             // ZAP
-            if (direction != NO_DIRECTION) {
-                if (steps == 0 && zaps > 0) {
-                    new_index = player_index(px, py, direction);
-                    if (grid[new_index] != WALL_BROKEN) {
-                        // NOTE: Broke wall (DESTROY)
-                        grid[new_index] = WALL_BROKEN;
-                        zap_cooldown_counter = zap_cooldown;
-                        zaps--;
-                    } else {
-                        // NOTE: No wall to break, edge of map/trail (BONK)
-                    }
+            if (steps == 0) {
+                new_index = player_index(px, py, direction);
+                if (zaps > 0 && grid[new_index] != WALL_BROKEN) {
+                    // NOTE: Broke wall (DESTROY)
+                    grid[new_index] = WALL_BROKEN;
+                    zap_cooldown_counter = zap_cooldown;
+                    zaps--;
                 } else {
-                    // NOTE: (ZIP SOUND pick random pitch)
+                    // NOTE: No wall to break, edge of map or trail (BONK)
                 }
+            } else {
+                // NOTE: (ZIP SOUND pick random pitch)
             }
+
             if (zap_cooldown_counter > 0) {
                 zap_cooldown_counter--;
             }
@@ -235,7 +234,7 @@ int main(void) {
                         } else if (scroll_dir == EAST) {
                             scroll_x++;
                             if (scroll_x >= CELL_SIZE) {
-                                // TODO: Generate new column
+                                new_maze_col();
 
                                 col_index++;
                                 if (col_index >= GRID_WIDTH) {
@@ -253,7 +252,7 @@ int main(void) {
                                     col_index = GRID_WIDTH - 1;
                                 }
 
-                                // TODO: Generate new column
+                                new_maze_col();
 
                                 scroll_x = CELL_SIZE;
                                 px += 2;
@@ -264,9 +263,13 @@ int main(void) {
                         scroll_speed = GetRandomValue(SCROLL_SLOWEST, SCROLL_FASTEST);
 
                         // Pick new random scroll direction
-                        // TODO: Do not pick same as current
-                        scroll_dir = GetRandomValue(0, 3);
-                        // NOTE: PLAY NOTE depending on direction
+                        SCROLL_DIRECTION new_scroll_dir = GetRandomValue(0, 2);
+
+                        // Do not pick same as current
+                        if (new_scroll_dir == scroll_dir) {
+                            scroll_dir = (new_scroll_dir + 1) % 4;
+                            // NOTE: PLAY NOTE depending on direction
+                        }
 
                         // Pick new random scroll counter
                         scroll_counter = CELL_SIZE * GetRandomValue(SCROLL_MINIMUM, SCROLL_MAXIMUM);
@@ -497,3 +500,23 @@ void new_maze_row() {
     }
 }
 
+
+void new_maze_col() {
+    // New maze row
+    for (int y = 0; y < GRID_HEIGHT; y++) {
+        grid[y * GRID_WIDTH + col_index] = GetRandomValue(0, 1) + 1;
+    }
+
+    // Clear trail, generate new collectibles
+    for (int x = 0; x < 2; x++) {
+        for (int y = 0; y < TRAIL_HEIGHT; y++) {
+            int index = y * TRAIL_WIDTH + (col_index * 2 + x);
+            trail[index] = NO_DIRECTION;
+            collectibles[index] = false;
+            if (x % 2 == y % 2) {
+                if (GetRandomValue(0, LUCK) != 0) continue;
+                collectibles[index] = true;
+            }
+        }
+    }
+}
