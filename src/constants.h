@@ -29,6 +29,8 @@
 
 #define SCROLL_FASTEST 4
 #define SCROLL_SLOWEST 8
+#define SCROLL_MINIMUM 10
+#define SCROLL_MAXIMUM 20
 
 // C64 colours
 // Colour names from here: https://sta.c64.org/cbm64col.html
@@ -53,10 +55,10 @@
 typedef enum {
     C64_BACKWARD,
     C64_FORWARD,
-    C64_TRAIL_NE,
-    C64_TRAIL_SE,
     C64_TRAIL_SW,
     C64_TRAIL_NW,
+    C64_TRAIL_NE,
+    C64_TRAIL_SE,
     C64_PLAYER,
     C64_COLLECTIBLE,
     C64_BOLT,

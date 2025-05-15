@@ -19,6 +19,7 @@ void handle_resize();
 void check_for_collectible(int new_index);
 int player_index(int x, int y, MOVE_DIRECTION dir);
 bool should_stop_zip(int x, int y, MOVE_DIRECTION dir);
+void new_maze_row();
 
 
 // GLOBALS /////////////////////////////////////////////////////////////////////
@@ -75,21 +76,6 @@ int main(void) {
     SetWindowIcon(icon);
     handle_resize();
 
-    // Random starting maze
-    for (int i = 0; i < GRID_CELLS; i++) {
-        grid[i] = GetRandomValue(0, 1) + 1;
-    }
-
-    // Setup trail and collectibles
-    /*for (int y = 0; y < TRAIL_HEIGHT; y++) {*/
-    /*    for (int x = 0; x < TRAIL_WIDTH; x++) {*/
-    /*        trail[y * TRAIL_WIDTH + x] = NO_DIRECTION;*/
-    /*        if (x == px && y == py) continue;*/
-    /*        if (GetRandomValue(0, LUCK) != 0) continue;*/
-    /*        collectibles[y * TRAIL_WIDTH + x] = x % 2 == y % 2;*/
-    /*    }*/
-    /*}*/
-
     Vector2 pos = (Vector2) {0, 0};
     Rectangle char_rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
 
@@ -101,6 +87,24 @@ int main(void) {
     int ox = 0;
     int oy = 0;
 
+    // Random starting maze
+    for (int i = 0; i < GRID_CELLS; i++) {
+        grid[i] = GetRandomValue(0, 1) + 1;
+    }
+
+    // Setup trail and collectibles
+    for (int y = 0; y < TRAIL_HEIGHT; y++) {
+        for (int x = 0; x < TRAIL_WIDTH; x++) {
+            new_index = y * TRAIL_WIDTH + x;
+            trail[new_index] = NO_DIRECTION;
+            if (x % 2 == y % 2) {
+                collectibles[new_index] = false;
+                if (GetRandomValue(0, LUCK) == 0) {
+                    collectibles[new_index] = true;
+                }
+            }
+        }
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     // GAME LOOP ///////////////////////////////////////////////////////////////
@@ -139,13 +143,13 @@ int main(void) {
                 // ZIP
                 while (1) {
                     if (should_stop_zip(px, py, direction)) break;
-                    /*new_index = (py + oy) * TRAIL_WIDTH + (px + ox);*/
-                    /*if (trail[new_index] != NO_DIRECTION) {*/
-                    /*    // NOTE: Hit into trail*/
-                    /*    break;*/
-                    /*}*/
-                    /*check_for_collectible(new_index, &zaps);*/
-                    /*trail[py * TRAIL_WIDTH + px] = direction;*/
+                    new_index = ((py + oy + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + ox);
+                    if (trail[new_index] != NO_DIRECTION) {
+                        // NOTE: Hit into trail
+                        break;
+                    }
+                    check_for_collectible(new_index);
+                    trail[((py + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + px] = direction;
                     px += ox;
                     py += oy;
                     steps++;
@@ -171,10 +175,7 @@ int main(void) {
                         if (scroll_dir == NORTH || scroll_dir == EAST) {
                             scroll_y++;
                             if (scroll_y >= CELL_SIZE) {
-                                // TODO: New maze row
-                                for (int x = 0; x < GRID_WIDTH; x++) {
-                                    grid[row_index * GRID_WIDTH + x] = GetRandomValue(0, 1) + 1;
-                                }
+                                new_maze_row();
 
                                 row_index++;
                                 if (row_index >= GRID_HEIGHT) {
@@ -193,21 +194,21 @@ int main(void) {
                                     row_index = GRID_HEIGHT - 1;
                                 }
 
-                                // TODO: New maze row
-                                for (int x = 0; x < GRID_WIDTH; x++) {
-                                    grid[row_index * GRID_WIDTH + x] = GetRandomValue(0, 1) + 1;
-                                }
+                                new_maze_row();
 
                                 scroll_y = CELL_SIZE;
                                 py += 2;
                             }
                         }
                     } else {
+                        // Pick random scroll speed
+                        scroll_speed = GetRandomValue(SCROLL_SLOWEST, SCROLL_FASTEST);
+
                         // Pick new random scroll direction
                         scroll_dir = GetRandomValue(0, 3);
 
                         // Pick new random scroll counter
-                        scroll_counter = CELL_SIZE * GetRandomValue(10, 20);
+                        scroll_counter = CELL_SIZE * GetRandomValue(SCROLL_MINIMUM, SCROLL_MAXIMUM);
                     }
                     scroll_counter--;
                 }
@@ -240,23 +241,26 @@ int main(void) {
         }
 
         // Trail and collectibles
-        /*for (int y = 0; y < TRAIL_HEIGHT; y++) {*/
-        /*    for (int x = 0; x < TRAIL_WIDTH; x++) {*/
-        /*        pos.x = x * HALF_CELL + CELL_SIZE - scroll_x;*/
-        /*        pos.y = y * HALF_CELL - HALF_CELL - scroll_y;*/
-        /**/
-        /*        new_index = y * TRAIL_WIDTH + x;*/
-        /*        if (trail[new_index] != NO_DIRECTION) {*/
-        /*            char_rect.x = (trail[new_index] - 1 + C64_TRAIL_NE) * CELL_SIZE;*/
-        /*            DrawTextureRec(spritesheet, char_rect, pos, C64_LIGHT_GREY);*/
-        /*        }*/
-        /**/
-        /*        char_rect.x = C64_COLLECTIBLE * CELL_SIZE;*/
-        /*        if (collectibles[new_index]) {*/
-        /*            DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);*/
-        /*        }*/
-        /*    }*/
-        /*}*/
+        for (int y = 0; y < TRAIL_HEIGHT; y++) {
+            for (int x = 0; x < TRAIL_WIDTH; x++) {
+                pos.x = x * HALF_CELL + CELL_SIZE - scroll_x;
+                pos.y = y * HALF_CELL - HALF_CELL - scroll_y;
+
+                new_index = ((y + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + x;
+
+                char_rect.x = C64_COLLECTIBLE * CELL_SIZE;
+                if (collectibles[new_index]) {
+                    DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+                }
+
+                /*pos.x += 2;*/
+                /*pos.y += 2;*/
+                if (trail[new_index] != NO_DIRECTION) {
+                    char_rect.x = (trail[new_index] - 1 + C64_TRAIL_SW) * CELL_SIZE;
+                    DrawTextureRec(spritesheet, char_rect, pos, C64_LIGHT_GREY);
+                }
+            }
+        }
 
         // Player
         pos.x = px * HALF_CELL + CELL_SIZE - scroll_x;
@@ -412,3 +416,25 @@ bool should_stop_zip(int x, int y, MOVE_DIRECTION dir) {
     }
     return true;
 }
+
+
+void new_maze_row() {
+    // New maze row
+    for (int x = 0; x < GRID_WIDTH; x++) {
+        grid[row_index * GRID_WIDTH + x] = GetRandomValue(0, 1) + 1;
+    }
+
+    // Clear trail, generate new collectibles
+    for (int y = 0; y < 2; y++) {
+        for (int x = 0; x < TRAIL_WIDTH; x++) {
+            int index = (row_index * 2 + y) * TRAIL_WIDTH + x;
+            trail[index] = NO_DIRECTION;
+            collectibles[index] = false;
+            if (x % 2 == y % 2) {
+                if (GetRandomValue(0, LUCK) != 0) continue;
+                collectibles[index] = true;
+            }
+        }
+    }
+}
+
