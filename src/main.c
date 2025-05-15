@@ -34,7 +34,7 @@ bool collectibles[TRAIL_CELLS];
 int BOUNDS_X = (GRID_WIDTH - 2) * 2;
 int BOUNDS_Y = (GRID_HEIGHT - 1) * 2;
 
-bool is_action_mode = false;
+bool is_action_mode = true;
 
 // TODO: Load from web
 uint32_t highscore = 360;
@@ -56,7 +56,7 @@ int scroll_speed = 4;
 int px = 37;
 int py = 25;
 
-int zaps = 300;
+int zaps = 3;
 
 
 int main(void) {
@@ -171,6 +171,7 @@ int main(void) {
                     new_index = ((py + oy + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + ox + col_index * 2) % TRAIL_WIDTH;
                     if (trail[new_index] != NO_DIRECTION) {
                         // NOTE: Hit into trail (BONK)
+                        direction = NO_DIRECTION;
                         break;
                     }
                     check_for_collectible(new_index);
@@ -182,7 +183,7 @@ int main(void) {
             }
 
             // ZAP
-            if (steps == 0) {
+            if (steps == 0 && direction != NO_DIRECTION) {
                 new_index = player_index(px, py, direction);
                 if (zaps > 0 && grid[new_index] != WALL_BROKEN) {
                     // NOTE: Broke wall (DESTROY)
