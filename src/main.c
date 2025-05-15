@@ -44,6 +44,7 @@ uint32_t ticks = 0;
 bool gameover = false;
 
 int row_index = 0; // Points to the first row to be rendered
+int col_index = 0; // Points to the first col to be rendered
 SCROLL_DIRECTION scroll_dir = NORTH;
 int scroll_counter = 40;
 int scroll_x = 0;
@@ -54,7 +55,7 @@ int scroll_speed = 4;
 // TODO: Would be good to change to proper x, y system...
 int px = 37;
 int py = 25;
-int zaps = 100;
+int zaps = 3;
 
 
 int main(void) {
@@ -143,14 +144,14 @@ int main(void) {
                 // ZIP
                 while (1) {
                     if (should_stop_zip(px, py, direction)) break;
-                    new_index = ((py + oy + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + ox);
+                    new_index = ((py + oy + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + ox + col_index * 2) % TRAIL_WIDTH;
                     if (trail[new_index] != NO_DIRECTION) {
                         // NOTE: Hit into trail
                         direction = NO_DIRECTION;
                         break;
                     }
                     check_for_collectible(new_index);
-                    trail[((py + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + px] = direction;
+                    trail[((py + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + col_index * 2) % TRAIL_WIDTH] = direction;
                     px += ox;
                     py += oy;
                     steps++;
@@ -180,7 +181,7 @@ int main(void) {
 
                 if (ticks % scroll_speed == 0) {
                     if (scroll_counter > 0) {
-                        if (scroll_dir == NORTH || scroll_dir == EAST) {
+                        if (scroll_dir == NORTH) {
                             scroll_y++;
                             if (scroll_y >= CELL_SIZE) {
                                 new_maze_row();
@@ -193,11 +194,10 @@ int main(void) {
                                 scroll_y = 0;
                                 py -= 2;
                             }
-                        } else if (scroll_dir == SOUTH || scroll_dir == WEST) {
+                        } else if (scroll_dir == SOUTH) {
                             scroll_y--;
                             if (scroll_y < 0) {
                                 row_index--;
-
                                 if (row_index < 0) {
                                     row_index = GRID_HEIGHT - 1;
                                 }
@@ -207,12 +207,39 @@ int main(void) {
                                 scroll_y = CELL_SIZE;
                                 py += 2;
                             }
+                        } else if (scroll_dir == EAST) {
+                            scroll_x++;
+                            if (scroll_x >= CELL_SIZE) {
+                                // TODO: Generate new column
+
+                                col_index++;
+                                if (col_index >= GRID_WIDTH) {
+                                    row_index = 0;
+                                }
+
+                                scroll_x = 0;
+                                px -= 2;
+                            }
+                        } else if (scroll_dir == WEST) {
+                            scroll_x--;
+                            if (scroll_x < 0) {
+                                col_index--;
+                                if (col_index < 0) {
+                                    col_index = GRID_WIDTH - 1;
+                                }
+
+                                // TODO: Generate new column
+
+                                scroll_x = CELL_SIZE;
+                                px += 2;
+                            }
                         }
                     } else {
                         // Pick random scroll speed
                         scroll_speed = GetRandomValue(SCROLL_SLOWEST, SCROLL_FASTEST);
 
                         // Pick new random scroll direction
+                        // TODO: Do not pick same as current
                         scroll_dir = GetRandomValue(0, 3);
 
                         // Pick new random scroll counter
@@ -236,7 +263,7 @@ int main(void) {
                 pos.x = x * CELL_SIZE + CELL_SIZE - scroll_x;
                 pos.y = y * CELL_SIZE - scroll_y;
 
-                new_index = ((row_index + y) % GRID_HEIGHT) * GRID_WIDTH + x;
+                new_index = ((row_index + y) % GRID_HEIGHT) * GRID_WIDTH + (x + col_index) % GRID_WIDTH;
                 if (grid[new_index] == WALL_BROKEN) continue;
 
                 char_rect.x = C64_BACKWARD * CELL_SIZE;
@@ -254,7 +281,7 @@ int main(void) {
                 pos.x = x * HALF_CELL + CELL_SIZE - scroll_x;
                 pos.y = y * HALF_CELL - HALF_CELL - scroll_y;
 
-                new_index = ((y + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + x;
+                new_index = ((y + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (x + col_index * 2) % TRAIL_WIDTH;
 
                 char_rect.x = C64_COLLECTIBLE * CELL_SIZE;
                 if (collectibles[new_index]) {
@@ -397,13 +424,13 @@ int player_index(int x, int y, MOVE_DIRECTION dir) {
         case NO_DIRECTION:
             break;
         case NORTH_EAST:
-            return ((int)((y - 1) / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)((x + 1) / 2);
+            return ((int)((y - 1) / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)((x + 1) / 2 + col_index) % GRID_WIDTH;
         case SOUTH_EAST:
-            return ((int)(y / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)((x + 1) / 2);
+            return ((int)(y / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)((x + 1) / 2 + col_index) % GRID_WIDTH;
         case SOUTH_WEST:
-            return ((int)(y / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)(x / 2);
+            return ((int)(y / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)(x / 2 + col_index) % GRID_WIDTH;
         case NORTH_WEST:
-            return ((int)((y - 1) / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)(x / 2);
+            return ((int)((y - 1) / 2 + row_index) % GRID_HEIGHT) * GRID_WIDTH + (int)(x / 2 + col_index) % GRID_WIDTH;
     }
     return -1;
 }
