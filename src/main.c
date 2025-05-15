@@ -146,6 +146,7 @@ int main(void) {
                     new_index = ((py + oy + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + ox);
                     if (trail[new_index] != NO_DIRECTION) {
                         // NOTE: Hit into trail
+                        direction = NO_DIRECTION;
                         break;
                     }
                     check_for_collectible(new_index);
@@ -154,15 +155,22 @@ int main(void) {
                     py += oy;
                     steps++;
                 }
-
-                // ZAP
-                if (steps == 0 && zaps > 0) {
-                    zap_cooldown_counter = zap_cooldown;
-                    grid[player_index(px, py, direction)] = WALL_BROKEN;
-                    zaps--;
-                }
             }
 
+            // ZAP
+            if (direction != NO_DIRECTION) {
+                if (steps == 0 && zaps > 0) {
+                    new_index = player_index(px, py, direction);
+                    if (grid[new_index] != WALL_BROKEN) {
+                        // NOTE: Broke wall
+                        grid[new_index] = WALL_BROKEN;
+                        zap_cooldown_counter = zap_cooldown;
+                        zaps--;
+                    } else {
+                        // NOTE: No wall to break
+                    }
+                }
+            }
             if (zap_cooldown_counter > 0) {
                 zap_cooldown_counter--;
             }
