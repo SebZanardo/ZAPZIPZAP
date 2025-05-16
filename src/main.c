@@ -1,4 +1,4 @@
-#include <stdio.h>
+/*#include <stdio.h>*/
 /*#include <assert.h>*/
 #include <stdint.h>
 #include <stdbool.h>
@@ -64,13 +64,12 @@ int scroll_counter = 40;
 int scroll_x = 0;
 int scroll_y = 0;
 int scroll_speed = 1;
-int scroll_multiple = 1; // Must be 1, 2, 4 or 8. but 8 is too fast
 
 // NOTE: Both must be even or both must be odd! (37,25) is centre.
 int px = 37;
 int py = 25;
 
-int zaps = 3;
+int zaps = 8;
 
 
 int main(void) {
@@ -293,10 +292,10 @@ int main(void) {
             if (is_action_mode) {
                 score++;
 
-                if (ticks % scroll_speed == 0) {
-                    if (scroll_counter > 0) {
+                if (scroll_counter > 0) {
+                    if (ticks % scroll_speed == 0) {
                         if (scroll_dir == NORTH) {
-                            scroll_y += scroll_multiple;
+                            scroll_y ++;
                             if (scroll_y >= CELL_SIZE) {
                                 new_maze_row();
 
@@ -312,9 +311,7 @@ int main(void) {
                             scroll_y--;
                             if (scroll_y < 0) {
                                 row_index--;
-                                if (row_index < 0) {
-                                    row_index = GRID_HEIGHT - 1;
-                                }
+                                if (row_index < 0) row_index = GRID_HEIGHT - 1;
 
                                 new_maze_row();
 
@@ -322,25 +319,21 @@ int main(void) {
                                 py += 2;
                             }
                         } else if (scroll_dir == EAST) {
-                            scroll_x += scroll_multiple;
+                            scroll_x++;
                             if (scroll_x >= CELL_SIZE) {
                                 new_maze_col();
 
                                 col_index++;
-                                if (col_index >= GRID_WIDTH) {
-                                    row_index = 0;
-                                }
+                                if (col_index >= GRID_WIDTH) col_index = 0;
 
                                 scroll_x = 0;
                                 px -= 2;
                             }
                         } else if (scroll_dir == WEST) {
-                            scroll_x += scroll_multiple;
+                            scroll_x--;
                             if (scroll_x < 0) {
                                 col_index--;
-                                if (col_index < 0) {
-                                    col_index = GRID_WIDTH - 1;
-                                }
+                                if (col_index < 0) col_index = GRID_WIDTH - 1;
 
                                 new_maze_col();
 
@@ -348,10 +341,10 @@ int main(void) {
                                 px += 2;
                             }
                         }
-                    } else {
-                        new_scroll_direction();
                     }
-                    scroll_counter -= scroll_multiple;
+                    scroll_counter--;
+                } else {
+                    new_scroll_direction();
                 }
             } else {
                 score += steps;
@@ -595,7 +588,7 @@ void new_maze_col() {
     // Clear trail, generate new collectibles
     for (int x = 0; x < 2; x++) {
         for (int y = 0; y < TRAIL_HEIGHT; y++) {
-            int index = y * TRAIL_WIDTH + (col_index * 2 + x);
+            int index = y * TRAIL_WIDTH + col_index * 2 + x;
             trail[index] = NO_DIRECTION;
             collectibles[index] = false;
             if (x % 2 == y % 2) {
@@ -608,23 +601,11 @@ void new_maze_col() {
 
 void new_scroll_direction() {
     // Pick random scroll speed
-    scroll_speed = GetRandomValue(1, 6);
-
-    if (scroll_speed >= 2) {
-        scroll_speed -= 1;
-        scroll_multiple = 1;
-    } else if (scroll_speed >= 1) {
-        scroll_speed = 1;
-        scroll_multiple = 2;
-    } else {
-        scroll_speed = 1;
-        scroll_multiple = 4;
-    }
+    scroll_speed = GetRandomValue(1, 4);
 
     // Pick new random scroll direction
     SCROLL_DIRECTION random_dir = GetRandomValue(0, 2);
 
-    printf("scroll changed!\n");
     // Don't pick same scroll directions
     if (random_dir == scroll_dir) {
         scroll_dir = random_dir + 1;
