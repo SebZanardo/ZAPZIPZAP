@@ -1,10 +1,12 @@
-/*#include <stdio.h>*/
+#include <stdio.h>
 /*#include <assert.h>*/
+#include <time.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "raylib.h"
 #include "raymath.h"
 #include "constants.h"
+
 
 #ifdef WEB_BUILD
 #include <emscripten/emscripten.h>
@@ -35,16 +37,26 @@ bool should_stop_zip(int x, int y, MOVE_DIRECTION dir);
 void new_maze_row();
 void new_maze_col();
 void new_scroll_direction();
+void update_time_and_seed();
 
 
 // GLOBALS /////////////////////////////////////////////////////////////////////
 WindowParameters window;
+
+time_t now;
+int day;
+int seconds_until_next_day;
+int hours;
+int minutes;
+int seconds;
+int seed;
+
 WALL_STATE grid[GRID_CELLS];
 
 MOVE_DIRECTION trail[TRAIL_CELLS];
 bool collectibles[TRAIL_CELLS];
 
-int BOUNDS_X = (GRID_WIDTH - 2) * 2;
+int BOUNDS_X = (GRID_WIDTH - 1) * 2;
 int BOUNDS_Y = (GRID_HEIGHT - 1) * 2;
 
 bool is_action_mode = true;
@@ -68,7 +80,6 @@ int scroll_speed = 1;
 // NOTE: Both must be even or both must be odd! (37,25) is centre.
 int px = 37;
 int py = 25;
-
 int zaps = 8;
 
 
@@ -98,8 +109,8 @@ int main(void) {
     SetWindowIcon(icon);
     handle_resize();
 
-    // TODO: Get random seed from local time day
-    SetRandomSeed(0);
+    // Get random seed from time
+    update_time_and_seed();
 
     Vector2 pos = (Vector2) {0, 0};
     Rectangle char_rect = (Rectangle) {0, 0, CELL_SIZE, CELL_SIZE};
@@ -476,8 +487,8 @@ int main(void) {
         );
 
         /*DrawCircleV(mouse_pos, 8.0f, C64_GREEN);*/
+        /*DrawFPS(0, 0);*/
 
-        DrawFPS(0, 0);
         EndDrawing();
 
         // POST-UPDATE /////////////////////////////////////////////////////////
@@ -617,4 +628,21 @@ void new_scroll_direction() {
 
     // Pick new random scroll counter
     scroll_counter = CELL_SIZE * GetRandomValue(SCROLL_MINIMUM, SCROLL_MAXIMUM);
+}
+
+
+void update_time_and_seed() {
+    now = time(NULL);
+    day = now / SECONDS_IN_DAY;
+    seconds_until_next_day = SECONDS_IN_DAY - now % SECONDS_IN_DAY;
+    hours = seconds_until_next_day / 3600;
+    minutes = (seconds_until_next_day % 3600) / 60;
+    seconds = seconds_until_next_day % 60;
+
+    if (seed != day) {
+        SetRandomSeed(day);
+        seed = day;
+    }
+
+    printf("%02d:%02d:%02d\n", hours, minutes, seconds);
 }

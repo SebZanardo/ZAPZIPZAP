@@ -28,6 +28,8 @@
 
 #define MIN_DRAG_LENGTH 16.0f
 #define MIN_TAP_TICKS FPS  // 1 second
+#define SECONDS_IN_DAY 86400
+
 
 #define ZAP_BONUS_SCORE 100
 
