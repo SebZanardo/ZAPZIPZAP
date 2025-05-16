@@ -1,3 +1,14 @@
+/*#include <stdio.h>*/
+/*#include <assert.h>*/
+#include <time.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include "raylib.h"
+#include "raymath.h"
+
+
+#define DAY_PUBLISHED 20225
+
 // Macros
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -9,9 +20,9 @@
 #define HALF_CELL (int)(CELL_SIZE / 2)
 
 // +1 - 2 So scrolling looks seamless and taking into account UI bars
-#define GRID_WIDTH (WINDOW_WIDTH / CELL_SIZE - 1)
+#define GRID_WIDTH (int)(WINDOW_WIDTH / CELL_SIZE - 1)
 // +1 So scrolling looks seamless
-#define GRID_HEIGHT (WINDOW_HEIGHT / CELL_SIZE + 1)
+#define GRID_HEIGHT (int)(WINDOW_HEIGHT / CELL_SIZE + 1)
 #define GRID_CELLS (GRID_WIDTH * GRID_HEIGHT)
 
 #define TRAIL_WIDTH (GRID_WIDTH * 2)
@@ -27,11 +38,11 @@
 #define LUCK 16
 
 #define MIN_DRAG_LENGTH 16.0f
-#define MIN_TAP_TICKS FPS  // 1 second
+#define MIN_TAP_TICKS 20
 #define SECONDS_IN_DAY 86400
 
-
 #define ZAP_BONUS_SCORE 100
+#define ZAP_VISUAL_COOLDOWN 10
 
 #define SCROLL_MINIMUM 10
 #define SCROLL_MAXIMUM 30
@@ -54,6 +65,13 @@
 #define C64_LIGHT_GREEN (Color) {148, 224, 137, 255}
 #define C64_LIGHT_BLUE (Color) {120, 105, 196, 255}
 #define C64_LIGHT_GREY (Color) {159, 159, 159, 255}
+
+
+typedef enum {
+    MENU,
+    GAME,
+    SCORE,
+} SCENE;
 
 // Ordering of characters in spritesheet
 typedef enum {
@@ -107,6 +125,7 @@ typedef enum {
     C64_COLON,
     C64_APOSTROPHE,
     C64_SOLID,
+    C64_BLANK,
 } C64_CHARACTER;
 
 typedef enum {
@@ -129,3 +148,28 @@ typedef enum {
     SOUTH,
     WEST,
 } SCROLL_DIRECTION;
+
+
+typedef struct {
+    float screen_width;
+    float screen_height;
+    float scale;
+    float offset_x;
+    float offset_y;
+} WindowParameters;
+
+typedef struct {
+    MOVE_DIRECTION direction;
+    bool mouse_down;
+    bool select;
+    uint32_t held_timer;
+    Vector2 mouse_pos;
+    Vector2 drag_start;
+} InputBuffer;
+
+typedef struct {
+    int day;
+    int hours;
+    int minutes;
+    int seconds;
+} DateBuffer;
