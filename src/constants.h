@@ -19,12 +19,15 @@
 #define TRAIL_CELLS (TRAIL_WIDTH * TRAIL_HEIGHT)
 
 #define WINDOW_CAPTION "ZAPZIPZAP"
-#define FPS 60
+#define FPS 0
 #define MUSIC_VOLUME 0.6f
 
 #define NAME_LEN 3
 #define SCORE_LEN 8
 #define LUCK 16
+
+#define MIN_DRAG_LENGTH 16.0f  // NOTE: This should be scaled based on upscale size
+#define MIN_TAP_TICKS 60
 
 #define ZAP_BONUS_SCORE 100
 

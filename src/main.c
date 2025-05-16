@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "raylib.h"
+#include "raymath.h"
 #include "constants.h"
 
 #ifdef WEB_BUILD
@@ -129,6 +130,10 @@ int main(void) {
         }
     }
 
+    bool mouse_down = false;
+    uint32_t held_timer = 0;
+    Vector2 drag_start = (Vector2) { 0, 0 };
+
     ////////////////////////////////////////////////////////////////////////////
     // GAME LOOP ///////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -139,52 +144,105 @@ int main(void) {
         if (px < 0 || px > TRAIL_WIDTH || py < 0 || py > TRAIL_HEIGHT) {
             gameover = true;
         }
-        Vector2 touchPosition = GetTouchPosition(0);
-        Vector2 mousePosition = GetMousePosition();
+
+        Vector2 mouse_pos = GetMousePosition();
 
         #ifdef WEB_BUILD
             if (!handheld) {
-                touchPosition.x *= window.screen_width / WINDOW_WIDTH;
-                touchPosition.y *= window.screen_height / WINDOW_HEIGHT;
-                mousePosition.x *= window.screen_width / WINDOW_WIDTH;
-                mousePosition.y *= window.screen_height / WINDOW_HEIGHT;
+                mouse_pos.x *= window.screen_width / WINDOW_WIDTH;
+                mouse_pos.y *= window.screen_height / WINDOW_HEIGHT;
             }
         #endif
 
         // INPUT ///////////////////////////////////////////////////////////////
         direction = NO_DIRECTION;
+
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !mouse_down) {
+            drag_start = mouse_pos;
+            mouse_down = true;
+            held_timer = 0;
+        }
+
+        if (mouse_down) {
+            if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+                // Drag
+                Vector2 drag = Vector2Subtract(mouse_pos, drag_start);
+                if (Vector2Length(drag) >= MIN_DRAG_LENGTH) {
+                    if (drag.x >= 0 && drag.y < 0) {
+                        direction = NORTH_EAST;
+                    } else if (drag.x >= 0 && drag.y >= 0) {
+                        direction = SOUTH_EAST;
+                    } else if (drag.x < 0 && drag.y >= 0) {
+                        direction = SOUTH_WEST;
+                    } else if (drag.x < 0 && drag.y < 0) {
+                        direction = NORTH_WEST;
+                    }
+                }
+                // Tap
+                else if (held_timer < MIN_TAP_TICKS) {
+                    if (mouse_pos.x >= window.screen_width / 2 && mouse_pos.y < window.screen_height / 2) {
+                        direction = NORTH_EAST;
+                    } else if (mouse_pos.x >= window.screen_width / 2 && mouse_pos.y >= window.screen_height / 2) {
+                        direction = SOUTH_EAST;
+                    } else if (mouse_pos.x < window.screen_width / 2 && mouse_pos.y >= window.screen_height / 2) {
+                        direction = SOUTH_WEST;
+                    } else if (mouse_pos.x < window.screen_width / 2 && mouse_pos.y < window.screen_height / 2) {
+                        direction = NORTH_WEST;
+                    }
+                }
+                mouse_down = false;
+            } else {
+                held_timer++;
+            }
+        }
+
         if (
             IsKeyPressed(KEY_LEFT) ||
             IsKeyPressed(KEY_Z) ||
             IsKeyPressed(KEY_A)
         ) {
             direction = SOUTH_WEST;
-            ox = -1;
-            oy = 1;
         } else if (
             IsKeyPressed(KEY_RIGHT) ||
             IsKeyPressed(KEY_O) ||
             IsKeyPressed(KEY_D)
         ) {
             direction = NORTH_EAST;
-            ox = 1;
-            oy = -1;
         } else if (
             IsKeyPressed(KEY_UP) ||
             IsKeyPressed(KEY_Q) ||
             IsKeyPressed(KEY_W)
         ) {
             direction = NORTH_WEST;
-            ox = -1;
-            oy = -1;
         } else if (
             IsKeyPressed(KEY_DOWN) ||
             IsKeyPressed(KEY_M) ||
             IsKeyPressed(KEY_S)
         ) {
             direction = SOUTH_EAST;
-            ox = 1;
-            oy = 1;
+        }
+
+        // Set offset direction
+        switch (direction) {
+            case SOUTH_WEST:
+                ox = -1;
+                oy = 1;
+                break;
+            case NORTH_EAST:
+                ox = 1;
+                oy = -1;
+                break;
+            case NORTH_WEST:
+                ox = -1;
+                oy = -1;
+                break;
+            case SOUTH_EAST:
+                ox = 1;
+                oy = 1;
+                break;
+            default:
+                ox = 0;
+                oy = 0;
         }
 
         // UPDATE //////////////////////////////////////////////////////////////
@@ -432,10 +490,9 @@ int main(void) {
             WHITE
         );
 
-        DrawCircleV(touchPosition, 16.0f, C64_RED);
-        DrawCircleV(mousePosition, 8.0f, C64_GREEN);
+        /*DrawCircleV(mouse_pos, 8.0f, C64_GREEN);*/
 
-        /*DrawFPS(0, 0);*/
+        DrawFPS(0, 0);
         EndDrawing();
 
         // POST-UPDATE /////////////////////////////////////////////////////////
