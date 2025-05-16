@@ -127,6 +127,13 @@ int main(void) {
         Vector2 touchPosition = GetTouchPosition(0);
         Vector2 mousePosition = GetMousePosition();
 
+        #ifdef WEB_BUILD
+            touchPosition.x *= window.screen_width / WINDOW_WIDTH;
+            touchPosition.y *= window.screen_height / WINDOW_HEIGHT;
+            mousePosition.x *= window.screen_width / WINDOW_WIDTH;
+            mousePosition.y *= window.screen_height / WINDOW_HEIGHT;
+        #endif
+
         // INPUT ///////////////////////////////////////////////////////////////
         direction = NO_DIRECTION;
         if (
@@ -408,8 +415,8 @@ int main(void) {
             WHITE
         );
 
-        DrawCircleV(touchPosition, 8.0f, C64_RED);
-        DrawCircleV(mousePosition, 8.0f, C64_PURPLE);
+        DrawCircleV(touchPosition, 16.0f, C64_RED);
+        DrawCircleV(mousePosition, 8.0f, C64_GREEN);
 
         /*DrawFPS(0, 0);*/
         EndDrawing();
