@@ -124,6 +124,8 @@ int main(void) {
         if (px < 0 || px > TRAIL_WIDTH || py < 0 || py > TRAIL_HEIGHT) {
             gameover = true;
         }
+        Vector2 touchPosition = GetTouchPosition(0);
+        Vector2 mousePosition = GetMousePosition();
 
         // INPUT ///////////////////////////////////////////////////////////////
         direction = NO_DIRECTION;
@@ -405,6 +407,9 @@ int main(void) {
             0.0f,
             WHITE
         );
+
+        DrawCircleV(touchPosition, 8.0f, C64_RED);
+        DrawCircleV(mousePosition, 8.0f, C64_PURPLE);
 
         /*DrawFPS(0, 0);*/
         EndDrawing();
