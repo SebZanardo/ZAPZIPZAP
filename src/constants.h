@@ -19,22 +19,20 @@
 #define TRAIL_CELLS (TRAIL_WIDTH * TRAIL_HEIGHT)
 
 #define WINDOW_CAPTION "ZAPZIPZAP"
-#define FPS 0
+#define FPS 30  // SHeeeeeshhh, Apple iPhone you really making things difficult
 #define MUSIC_VOLUME 0.6f
 
 #define NAME_LEN 3
 #define SCORE_LEN 8
 #define LUCK 16
 
-#define MIN_DRAG_LENGTH 16.0f  // NOTE: This should be scaled based on upscale size
-#define MIN_TAP_TICKS 60
+#define MIN_DRAG_LENGTH 16.0f
+#define MIN_TAP_TICKS FPS  // 1 second
 
 #define ZAP_BONUS_SCORE 100
 
-#define SCROLL_FASTEST 2
-#define SCROLL_SLOWEST 8
 #define SCROLL_MINIMUM 10
-#define SCROLL_MAXIMUM 40
+#define SCROLL_MAXIMUM 20
 
 // C64 colours
 // Colour names from here: https://sta.c64.org/cbm64col.html

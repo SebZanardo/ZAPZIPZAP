@@ -1,4 +1,4 @@
-/*#include <stdio.h>*/
+#include <stdio.h>
 /*#include <assert.h>*/
 #include <stdint.h>
 #include <stdbool.h>
@@ -34,6 +34,7 @@ int player_maze_index(int x, int y, MOVE_DIRECTION dir);
 bool should_stop_zip(int x, int y, MOVE_DIRECTION dir);
 void new_maze_row();
 void new_maze_col();
+void new_scroll_direction();
 
 
 // GLOBALS /////////////////////////////////////////////////////////////////////
@@ -46,7 +47,7 @@ bool collectibles[TRAIL_CELLS];
 int BOUNDS_X = (GRID_WIDTH - 2) * 2;
 int BOUNDS_Y = (GRID_HEIGHT - 1) * 2;
 
-bool is_action_mode = false;
+bool is_action_mode = true;
 
 // TODO: Load from web
 uint32_t highscore = 360;
@@ -62,7 +63,8 @@ SCROLL_DIRECTION scroll_dir = NORTH;
 int scroll_counter = 40;
 int scroll_x = 0;
 int scroll_y = 0;
-int scroll_speed = 4;
+int scroll_speed = 1;
+int scroll_multiple = 1; // Must be 1, 2, 4 or 8. but 8 is too fast
 
 // NOTE: Both must be even or both must be odd! (37,25) is centre.
 int px = 37;
@@ -129,6 +131,9 @@ int main(void) {
             }
         }
     }
+
+    // Pick scroll direction
+    new_scroll_direction();
 
     bool mouse_down = false;
     uint32_t held_timer = 0;
@@ -291,7 +296,7 @@ int main(void) {
                 if (ticks % scroll_speed == 0) {
                     if (scroll_counter > 0) {
                         if (scroll_dir == NORTH) {
-                            scroll_y++;
+                            scroll_y += scroll_multiple;
                             if (scroll_y >= CELL_SIZE) {
                                 new_maze_row();
 
@@ -317,7 +322,7 @@ int main(void) {
                                 py += 2;
                             }
                         } else if (scroll_dir == EAST) {
-                            scroll_x++;
+                            scroll_x += scroll_multiple;
                             if (scroll_x >= CELL_SIZE) {
                                 new_maze_col();
 
@@ -330,7 +335,7 @@ int main(void) {
                                 px -= 2;
                             }
                         } else if (scroll_dir == WEST) {
-                            scroll_x--;
+                            scroll_x += scroll_multiple;
                             if (scroll_x < 0) {
                                 col_index--;
                                 if (col_index < 0) {
@@ -344,22 +349,9 @@ int main(void) {
                             }
                         }
                     } else {
-                        // Pick random scroll speed
-                        scroll_speed = GetRandomValue(SCROLL_SLOWEST, SCROLL_FASTEST);
-
-                        // Pick new random scroll direction
-                        SCROLL_DIRECTION new_scroll_dir = GetRandomValue(0, 2);
-
-                        // Do not pick same as current
-                        if (new_scroll_dir == scroll_dir) {
-                            scroll_dir = (new_scroll_dir + 1) % 4;
-                            // NOTE: PLAY NOTE depending on direction
-                        }
-
-                        // Pick new random scroll counter
-                        scroll_counter = CELL_SIZE * GetRandomValue(SCROLL_MINIMUM, SCROLL_MAXIMUM);
+                        new_scroll_direction();
                     }
-                    scroll_counter--;
+                    scroll_counter -= scroll_multiple;
                 }
             } else {
                 score += steps;
@@ -612,4 +604,36 @@ void new_maze_col() {
             }
         }
     }
+}
+
+void new_scroll_direction() {
+    // Pick random scroll speed
+    scroll_speed = GetRandomValue(1, 6);
+
+    if (scroll_speed >= 2) {
+        scroll_speed -= 1;
+        scroll_multiple = 1;
+    } else if (scroll_speed >= 1) {
+        scroll_speed = 1;
+        scroll_multiple = 2;
+    } else {
+        scroll_speed = 1;
+        scroll_multiple = 4;
+    }
+
+    // Pick new random scroll direction
+    SCROLL_DIRECTION random_dir = GetRandomValue(0, 2);
+
+    printf("scroll changed!\n");
+    // Don't pick same scroll directions
+    if (random_dir == scroll_dir) {
+        scroll_dir = random_dir + 1;
+    } else {
+        scroll_dir = random_dir;
+    }
+
+    // NOTE: PLAY NOTE depending on direction
+
+    // Pick new random scroll counter
+    scroll_counter = CELL_SIZE * GetRandomValue(SCROLL_MINIMUM, SCROLL_MAXIMUM);
 }
