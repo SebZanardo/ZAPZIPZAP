@@ -17,7 +17,8 @@ typedef struct {
 
 void handle_resize();
 void check_for_collectible(int new_index);
-int player_index(int x, int y, MOVE_DIRECTION dir);
+int player_index(int x, int y);
+int player_maze_index(int x, int y, MOVE_DIRECTION dir);
 bool should_stop_zip(int x, int y, MOVE_DIRECTION dir);
 void new_maze_row();
 void new_maze_col();
@@ -27,14 +28,13 @@ void new_maze_col();
 WindowParameters window;
 WALL_STATE grid[GRID_CELLS];
 
-// TODO: Would be good to make these only GRID_CELLS in length for easy scroll
 MOVE_DIRECTION trail[TRAIL_CELLS];
 bool collectibles[TRAIL_CELLS];
 
 int BOUNDS_X = (GRID_WIDTH - 2) * 2;
 int BOUNDS_Y = (GRID_HEIGHT - 1) * 2;
 
-bool is_action_mode = true;
+bool is_action_mode = false;
 
 // TODO: Load from web
 uint32_t highscore = 360;
@@ -168,14 +168,14 @@ int main(void) {
                 // ZIP
                 while (1) {
                     if (should_stop_zip(px, py, direction)) break;
-                    new_index = ((py + oy + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + ox + col_index * 2) % TRAIL_WIDTH;
+                    new_index = player_index(px + ox, py + oy);
                     if (trail[new_index] != NO_DIRECTION) {
                         // NOTE: Hit into trail (BONK)
                         direction = NO_DIRECTION;
                         break;
                     }
                     check_for_collectible(new_index);
-                    trail[((py + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (px + col_index * 2) % TRAIL_WIDTH] = direction;
+                    trail[player_index(px, py)] = direction;
                     px += ox;
                     py += oy;
                     steps++;
@@ -184,7 +184,7 @@ int main(void) {
 
             // ZAP
             if (steps == 0 && direction != NO_DIRECTION) {
-                new_index = player_index(px, py, direction);
+                new_index = player_maze_index(px, py, direction);
                 if (zaps > 0 && grid[new_index] != WALL_BROKEN) {
                     // NOTE: Broke wall (DESTROY)
                     grid[new_index] = WALL_BROKEN;
@@ -293,7 +293,8 @@ int main(void) {
                 pos.x = x * CELL_SIZE + CELL_SIZE - scroll_x;
                 pos.y = y * CELL_SIZE - scroll_y;
 
-                new_index = ((row_index + y) % GRID_HEIGHT) * GRID_WIDTH + (x + col_index) % GRID_WIDTH;
+                new_index = ((row_index + y) % GRID_HEIGHT) * GRID_WIDTH + (x + col_index) % GRID_WIDTH;;
+
                 if (grid[new_index] == WALL_BROKEN) continue;
 
                 char_rect.x = C64_BACKWARD * CELL_SIZE;
@@ -311,7 +312,7 @@ int main(void) {
                 pos.x = x * HALF_CELL + CELL_SIZE - scroll_x;
                 pos.y = y * HALF_CELL - HALF_CELL - scroll_y;
 
-                new_index = ((y + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (x + col_index * 2) % TRAIL_WIDTH;
+                new_index = player_index(x, y);
 
                 char_rect.x = C64_COLLECTIBLE * CELL_SIZE;
                 if (collectibles[new_index]) {
@@ -447,7 +448,12 @@ void check_for_collectible(int new_index) {
 }
 
 
-int player_index(int x, int y, MOVE_DIRECTION dir) {
+int player_index(int x, int y) {
+    return ((y + row_index * 2) % TRAIL_HEIGHT) * TRAIL_WIDTH + (x + col_index * 2) % TRAIL_WIDTH;
+}
+
+
+int player_maze_index(int x, int y, MOVE_DIRECTION dir) {
     switch (dir) {
         case NO_DIRECTION:
             break;
@@ -469,13 +475,13 @@ bool should_stop_zip(int x, int y, MOVE_DIRECTION dir) {
         case NO_DIRECTION:
             break;
         case SOUTH_WEST:
-            return x <= 0 || y >= BOUNDS_Y || grid[player_index(x, y, dir)] == WALL_BACKWARD;
+            return x <= 0 || y >= BOUNDS_Y || grid[player_maze_index(x, y, dir)] == WALL_BACKWARD;
         case NORTH_EAST:
-            return x >= BOUNDS_X || y <= 0 || grid[player_index(x, y, dir)] == WALL_BACKWARD;
+            return x >= BOUNDS_X || y <= 0 || grid[player_maze_index(x, y, dir)] == WALL_BACKWARD;
         case NORTH_WEST:
-            return x <= 0 || y <= 0 || grid[player_index(x, y, dir)] == WALL_FORWARD;
+            return x <= 0 || y <= 0 || grid[player_maze_index(x, y, dir)] == WALL_FORWARD;
         case SOUTH_EAST:
-            return x >= BOUNDS_X || y >= BOUNDS_Y || grid[player_index(x, y, dir)] == WALL_FORWARD;
+            return x >= BOUNDS_X || y >= BOUNDS_Y || grid[player_maze_index(x, y, dir)] == WALL_FORWARD;
     }
     return true;
 }
