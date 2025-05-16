@@ -32,7 +32,7 @@
 #define ZAP_BONUS_SCORE 100
 
 #define SCROLL_MINIMUM 10
-#define SCROLL_MAXIMUM 20
+#define SCROLL_MAXIMUM 30
 
 // C64 colours
 // Colour names from here: https://sta.c64.org/cbm64col.html
