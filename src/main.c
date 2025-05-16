@@ -5,6 +5,17 @@
 #include "raylib.h"
 #include "constants.h"
 
+#ifdef WEB_BUILD
+#include <emscripten/emscripten.h>
+
+EM_JS(bool, IsMobile, (), {
+    if (typeof navigator !== 'undefined') {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    return false;
+});
+#endif
+
 
 typedef struct {
     float screen_width;
@@ -74,6 +85,10 @@ int main(void) {
     SetMusicVolume(music, MUSIC_VOLUME);
     PlayMusicStream(music);
 
+    #ifdef WEB_BUILD
+        bool handheld = IsMobile();
+    #endif
+
     RenderTexture2D target = LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT);
     Texture2D spritesheet = LoadTexture("src/resources/fontsheet.png");
     Image icon = LoadImage("src/resources/icon.png");
@@ -128,10 +143,12 @@ int main(void) {
         Vector2 mousePosition = GetMousePosition();
 
         #ifdef WEB_BUILD
-            touchPosition.x *= window.screen_width / WINDOW_WIDTH;
-            touchPosition.y *= window.screen_height / WINDOW_HEIGHT;
-            mousePosition.x *= window.screen_width / WINDOW_WIDTH;
-            mousePosition.y *= window.screen_height / WINDOW_HEIGHT;
+            if (!handheld) {
+                touchPosition.x *= window.screen_width / WINDOW_WIDTH;
+                touchPosition.y *= window.screen_height / WINDOW_HEIGHT;
+                mousePosition.x *= window.screen_width / WINDOW_WIDTH;
+                mousePosition.y *= window.screen_height / WINDOW_HEIGHT;
+            }
         #endif
 
         // INPUT ///////////////////////////////////////////////////////////////
