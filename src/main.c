@@ -14,6 +14,8 @@ EM_JS(bool, IsMobile, (), {
 #endif
 
 
+void load_data();
+void save_data();
 void load_maze();
 void load_game();
 void reset();
@@ -133,6 +135,8 @@ int main(void) {
     #ifdef WEB_BUILD
         handheld = IsMobile();
     #endif
+
+    /*load_data();*/
 
     sfx_blocked = LoadSound("src/resources/blocked.mp3");
     sfx_collect = LoadSound("src/resources/collect.mp3");
@@ -421,11 +425,13 @@ int main(void) {
                                 action_highscore_name[i] = enter_name[i];
                             }
                             action_highscore = score;
+                            /*save_data();*/
                         } else {
                             for (int i = 0; i < NAME_LEN; i++) {
                                 puzzle_highscore_name[i] = enter_name[i];
                             }
                             puzzle_highscore = score;
+                            /*save_data();*/
                         }
                         scene = MENU;
                     }
@@ -509,6 +515,63 @@ int main(void) {
 
     CloseAudioDevice();
     CloseWindow();
+}
+
+
+void save_data() {
+    char data[256];
+    int offset = 0;
+    memcpy(data + offset, &action_highscore, sizeof(action_highscore));
+    offset += sizeof(uint32_t);
+    memcpy(data + offset, action_highscore_name, sizeof(action_highscore_name));
+    offset += 3 * sizeof(char);
+    memcpy(data + offset, &puzzle_highscore, sizeof(puzzle_highscore));
+    offset += sizeof(uint32_t);
+    memcpy(data + offset, puzzle_highscore_name, sizeof(puzzle_highscore_name));
+    offset += 3 * sizeof(char);
+
+    #ifdef WEB_BUILD
+        char js_command[256];
+        snprintf(js_command, sizeof(js_command), "localStorage.setItem('%s', '%s');", "zapzipzap", data);
+        emscripten_run_script(js_command);
+    #endif
+    #ifndef WEB_BUILD
+        if (SaveFileData("src/resources/savefile.dat", data, sizeof(action_highscore) + sizeof(action_highscore_name) + sizeof(puzzle_highscore) + sizeof(puzzle_highscore_name))) {
+            printf("save SUCCESS\n");
+        } else {
+            printf("save FAILED!!!\n");
+        }
+    #endif
+}
+
+
+void load_data() {
+    #ifdef WEB_BUILD
+        char js_command[256];
+        snprintf(js_command, sizeof(js_command), "localStorage.getItem('%s')", "zapzipzap");
+        const char *data = emscripten_run_script_string(js_command);
+    #endif
+    #ifndef WEB_BUILD
+        int dataSize = 0;
+        unsigned char *data = LoadFileData("src/resources/savefile.dat", &dataSize);
+    #endif
+
+    if (data != NULL) {
+        int offset = 0;
+        memcpy(&action_highscore, data + offset, sizeof(action_highscore));
+        offset += sizeof(uint32_t);
+        memcpy(action_highscore_name, data + offset, sizeof(action_highscore_name));
+        offset += 3 * sizeof(char);
+        memcpy(&puzzle_highscore, data + offset, sizeof(puzzle_highscore));
+        offset += sizeof(uint32_t);
+        memcpy(puzzle_highscore_name, data + offset, sizeof(puzzle_highscore_name));
+        printf("load SUCCESS\n");
+        #ifndef WEB_BUILD
+            free(data);
+        #endif
+    } else {
+        printf("NO SAVED SCORES\n");
+    }
 }
 
 

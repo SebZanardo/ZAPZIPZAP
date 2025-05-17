@@ -50,6 +50,8 @@ elif [ $1 = $WEB ]; then
     emcc -DWEB_BUILD -o web/index.html src/main.c -Os -Wall $HOME/raylib/src/web/libraylib.web.a \
         -I. -I$HOME/raylib/src -L. -L$HOME/raylib/src/web \
         -s USE_GLFW=3 \
+        -s FORCE_FILESYSTEM=1 \
+        -s ALLOW_MEMORY_GROWTH=1 \
         -s ASYNCIFY \
         --shell-file $HOME/raylib/src/minshell.html \
         --preload-file src/resources \
