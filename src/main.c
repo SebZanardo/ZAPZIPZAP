@@ -948,10 +948,15 @@ void render_menu() {
 
     // Credits
     pos.x = 120;
-    pos.y = 184;
+    pos.y = 176;
     length = 10;
     DrawRectangleV(pos, (Vector2) {length * CELL_SIZE, CELL_SIZE}, C64_BLUE);
     render_string(pos, "SEBZANARDO", length, false, C64_LIGHT_BLUE, true);
+    pos.x = 116;
+    pos.y = 184;
+    length = 11;
+    DrawRectangleV(pos, (Vector2) {length * CELL_SIZE, CELL_SIZE}, C64_BLUE);
+    render_string(pos, "HUNTERSTARR", length, false, C64_LIGHT_BLUE, true);
 
     // TODO: Daily login/attempt streak
 
