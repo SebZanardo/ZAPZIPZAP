@@ -63,6 +63,7 @@ Sound sfx_left;
 Sound sfx_right;
 Sound sfx_up;
 Sound sfx_down;
+Sound sfx_highscore;
 
 Texture2D spritesheet;
 Texture2D buttons;
@@ -141,12 +142,14 @@ int main(void) {
     sfx_scroll_west = LoadSound("src/resources/scroll_west.mp3");
     sfx_select = LoadSound("src/resources/select.mp3");
     sfx_zap = LoadSound("src/resources/zap.mp3");
+    SetSoundVolume(sfx_zap, 0.4f);
     sfx_zip = LoadSound("src/resources/zip.mp3");
     SetSoundVolume(sfx_zip, 0.6f);
     sfx_up = LoadSound("src/resources/up.mp3");
     sfx_down = LoadSound("src/resources/down.mp3");
     sfx_left = LoadSound("src/resources/left.mp3");
     sfx_right = LoadSound("src/resources/right.mp3");
+    sfx_highscore = LoadSound("src/resources/highscore.mp3");
 
     RenderTexture2D target = LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT);
     spritesheet = LoadTexture("src/resources/fontsheet.png");
@@ -205,14 +208,14 @@ int main(void) {
                 if (ui_timer > 0) {
                     if (!gameover) {
                         // Countdown
-                        if (ui_timer == 42) {
-                            PlaySound(sfx_down);
-                        } else if (ui_timer == 27) {
-                            PlaySound(sfx_left);
-                        } else if (ui_timer == 12) {
-                            PlaySound(sfx_right);
-                        } else if (ui_timer == 3) {
-                            PlaySound(sfx_up);
+                        if (ui_timer == 39) {
+                            PlaySound(sfx_scroll_south);
+                        } else if (ui_timer == 24) {
+                            PlaySound(sfx_scroll_west);
+                        } else if (ui_timer == 9) {
+                            PlaySound(sfx_scroll_east);
+                        } else if (ui_timer == 1) {
+                            PlaySound(sfx_scroll_north);
                         }
                     } else {
                         // GAMEOVER delay
@@ -254,6 +257,8 @@ int main(void) {
                         new_index = player_maze_index(px, py, input_buffer.direction);
                         if (zaps > 0 && grid[new_index] != WALL_BROKEN) {
                             // Broke wall
+                            float pitch = 1 - (float)GetRandomValue(1, 8) / 32.0f;
+                            SetSoundPitch(sfx_zap, pitch);
                             PlaySound(sfx_zap);
                             grid[new_index] = WALL_BROKEN;
                             zap_cooldown_counter = ZAP_VISUAL_COOLDOWN;
@@ -265,7 +270,7 @@ int main(void) {
                     } else {
                         // ZIP SOUND pick random pitch
                         if (steps > 0) {
-                            float pitch = 1 - (float)GetRandomValue(1, 8) / 40.0f;
+                            float pitch = 1 - (float)GetRandomValue(1, 8) / 32.0f;
                             SetSoundPitch(sfx_zip, pitch);
                             PlaySound(sfx_zip);
                         }
@@ -345,6 +350,7 @@ int main(void) {
                     if (is_action_mode) {
                         reset();
                         if (score > action_highscore) {
+                            PlaySound(sfx_highscore);
                             scene = SCORE;
                             // Load last highscore name into enter
                             for (int i = 0; i < NAME_LEN; i++) {
@@ -356,6 +362,7 @@ int main(void) {
                     } else {
                         reset();
                         if (score > puzzle_highscore) {
+                            PlaySound(sfx_highscore);
                             scene = SCORE;
                             // Load last highscore name into enter
                             for (int i = 0; i < NAME_LEN; i++) {
@@ -493,6 +500,7 @@ int main(void) {
     UnloadSound(sfx_right);
     UnloadSound(sfx_up);
     UnloadSound(sfx_down);
+    UnloadSound(sfx_highscore);
 
     UnloadImage(icon);
     UnloadTexture(spritesheet);
@@ -1004,7 +1012,7 @@ void render_game() {
 
             if (trail[new_index] != NO_DIRECTION) {
                 char_rect.x = (trail[new_index] - 1 + C64_TRAIL_SW) * CELL_SIZE;
-                DrawTextureRec(spritesheet, char_rect, pos, C64_LIGHT_GREY);
+                DrawTextureRec(spritesheet, char_rect, pos, zap_cooldown_counter > 0 ? C64_YELLOW : C64_LIGHT_GREY);
             }
         }
     }
