@@ -14,7 +14,11 @@ EM_JS(bool, IsMobile, (), {
 #endif
 
 
+void load_maze();
+void load_game();
 void handle_resize();
+void set_offset(MOVE_DIRECTION dir);
+MOVE_DIRECTION valid_move();
 void check_for_collectible(int new_index);
 int player_index(int x, int y);
 int player_maze_index(int x, int y, MOVE_DIRECTION dir);
@@ -28,9 +32,9 @@ void render_menu();
 void render_game();
 void render_maze();
 void render_integer(Vector2 pos, int value, int length, bool vertical, Color colour);
-// TODO: this takes a string
-void render_string(Vector2 pos, C64_CHARACTER* s, int length, bool vertical, Color colour);
-// TODO: make a function to map string to C64_CHARACTER*
+void render_string(Vector2 pos, char* s, int length, bool vertical, Color colour);
+C64_CHARACTER char_index(char c);
+
 
 // GLOBALS /////////////////////////////////////////////////////////////////////
 WindowParameters window;
@@ -56,17 +60,19 @@ WALL_STATE grid[GRID_CELLS];
 MOVE_DIRECTION trail[TRAIL_CELLS];
 bool collectibles[TRAIL_CELLS];
 
-int BOUNDS_X = (GRID_WIDTH - 1) * 2;
-int BOUNDS_Y = (GRID_HEIGHT - 1) * 2;
+int bounds_x = (GRID_WIDTH - 1) * 2;
+int bounds_y = (GRID_HEIGHT - 1) * 2;
 
 bool is_action_mode = true;
+int ui_index = 0;
+int ui_timer = 0;
 
 // TODO: Load from web or from file
 uint32_t puzzle_highscore = 360;
-C64_CHARACTER puzzle_highscore_name[NAME_LEN] = {C64_S, C64_E, C64_B};
+char puzzle_highscore_name[] = "SEB";
 
 uint32_t action_highscore = 999;
-C64_CHARACTER action_highscore_name[NAME_LEN] = {C64_Z, C64_E, C64_N};
+char action_highscore_name[] = "ZEN";
 
 uint32_t score = 0;
 bool gameover = false;
@@ -82,6 +88,8 @@ int scroll_speed = 1;
 // NOTE: Both must be even or both must be odd! (37,25) is centre.
 int px = 37;
 int py = 25;
+int ox = 0;
+int oy = 0;
 int zaps = 8;
 int zap_cooldown_counter = 0;
 
@@ -97,7 +105,7 @@ int main(void) {
 
     InitAudioDevice();
     SetAudioStreamBufferSizeDefault(4096);
-    music = LoadMusicStream("src/resources/demo.mp3");
+    music = LoadMusicStream("src/resources/theme.mp3");
     SetMusicVolume(music, MUSIC_VOLUME);
     PlayMusicStream(music);
 
@@ -116,34 +124,7 @@ int main(void) {
 
     // Get random seed from time
     update_time_and_seed();
-
-    int steps = 0;
-    int new_index = 0;
-    int ox = 0;
-    int oy = 0;
-
-    // Random starting maze
-    for (int i = 0; i < GRID_CELLS; i++) {
-        grid[i] = GetRandomValue(0, 1) + 1;
-    }
-
-    // Setup trail and collectibles
-    for (int y = 0; y < TRAIL_HEIGHT; y++) {
-        for (int x = 0; x < TRAIL_WIDTH; x++) {
-            new_index = y * TRAIL_WIDTH + x;
-            trail[new_index] = NO_DIRECTION;
-            if (x % 2 == y % 2) {
-                collectibles[new_index] = false;
-                if (GetRandomValue(0, LUCK) == 0) {
-                    collectibles[new_index] = true;
-                }
-            }
-        }
-    }
-
-    // Pick scroll direction
-    new_scroll_direction();
-
+    load_maze();
 
     ////////////////////////////////////////////////////////////////////////////
     // GAME LOOP ///////////////////////////////////////////////////////////////
@@ -152,44 +133,53 @@ int main(void) {
         // PRE-UPDATE //////////////////////////////////////////////////////////
         UpdateMusicStream(music);
         if (IsWindowResized()) handle_resize();
-        if (px < 0 || px > TRAIL_WIDTH || py < 0 || py > TRAIL_HEIGHT) {
-            gameover = true;
-        }
 
         // INPUT ///////////////////////////////////////////////////////////////
         update_input_buffer();
 
         // Set offset direction
-        switch (input_buffer.direction) {
-            case SOUTH_WEST:
-                ox = -1;
-                oy = 1;
-                break;
-            case NORTH_EAST:
-                ox = 1;
-                oy = -1;
-                break;
-            case NORTH_WEST:
-                ox = -1;
-                oy = -1;
-                break;
-            case SOUTH_EAST:
-                ox = 1;
-                oy = 1;
-                break;
-            default:
-                ox = 0;
-                oy = 0;
-        }
+        set_offset(input_buffer.direction);
 
         // UPDATE //////////////////////////////////////////////////////////////
         switch (scene) {
             case MENU:
                 update_time_and_seed();
+                if (input_buffer.select && ui_index != 0) {
+                    load_game();
+                } else if (input_buffer.mouse_down && input_buffer.mouse_pos.x < window.screen_width / 2) {
+                    ui_index = -1;
+                    load_game();
+                } else if (input_buffer.mouse_down && input_buffer.mouse_pos.x >= window.screen_width / 2) {
+                    ui_index = 1;
+                    load_game();
+                } else if (input_buffer.direction == NORTH_EAST || input_buffer.direction == SOUTH_EAST) {
+                    if (ui_index == 1) {
+                        load_game();
+                    }
+                    ui_index = 1;
+                } else if (input_buffer.direction == NORTH_WEST || input_buffer.direction == SOUTH_WEST) {
+                    if (ui_index == -1) {
+                        load_game();
+                    }
+                    ui_index = -1;
+                }
                 break;
             case GAME:
-                if (!gameover) {
-                    steps = 0;
+                if (ui_timer > 0) {
+                    if (!gameover) {
+                        // TODO: Countdown
+                    } else {
+                        // TODO: GAMEOVER delay
+                    }
+                    ui_timer--;
+                } else if (!gameover) {
+                    if (px < 0 || px > TRAIL_WIDTH || py < 0 || py > TRAIL_HEIGHT) {
+                        gameover = true;
+                        ui_timer = 150;
+                    }
+
+                    int new_index = 0;
+                    int steps = 0;
                     if (input_buffer.direction != NO_DIRECTION) {
                         // ZIP
                         while (1) {
@@ -286,7 +276,15 @@ int main(void) {
                         }
                     } else {
                         score += steps;
+
+                        // Check if no moves left
+                        if (valid_move() == NO_DIRECTION) {
+                            gameover = true;
+                            ui_timer = 150;
+                        }
                     }
+                } else {
+                    scene = MENU;
                 }
                 break;
 
@@ -356,6 +354,73 @@ int main(void) {
 }
 
 
+void load_maze() {
+    for (int i = 0; i < GRID_CELLS; i++) {
+        grid[i] = GetRandomValue(0, 1) + 1;
+    }
+}
+
+
+void load_game() {
+    // NOTE: Play sound effect!
+
+    update_time_and_seed();
+
+    if (ui_index == 1) {
+        is_action_mode = false;
+        bounds_x = (GRID_WIDTH - 2) * 2;
+        bounds_y = (GRID_HEIGHT - 1) * 2;
+    } else {
+        is_action_mode = true;
+        bounds_x = (GRID_WIDTH - 1) * 2;
+        bounds_y = (GRID_HEIGHT - 1) * 2;
+    }
+
+    ui_index = 0;
+    ui_timer = 50;
+
+    px = 37;
+    py = 25;
+    ox = 0;
+    oy = 0;
+    zaps = 8;
+    zap_cooldown_counter = 0;
+
+    score = 0;
+    gameover = false;
+
+    row_index = 0; // Points to the first row to be rendered
+    col_index = 0; // Points to the first col to be rendered
+    scroll_dir = NORTH;
+    scroll_counter = 40;
+    scroll_x = 0;
+    scroll_y = 0;
+    scroll_speed = 1;
+
+    // Random starting maze
+    load_maze();
+
+    // Setup trail and collectibles
+    for (int y = 0; y < TRAIL_HEIGHT; y++) {
+        for (int x = 0; x < TRAIL_WIDTH; x++) {
+            int new_index = y * TRAIL_WIDTH + x;
+            trail[new_index] = NO_DIRECTION;
+            if (x % 2 == y % 2) {
+                collectibles[new_index] = false;
+                if (GetRandomValue(0, LUCK) == 0) {
+                    collectibles[new_index] = true;
+                }
+            }
+        }
+    }
+
+    // Pick scroll direction
+    new_scroll_direction();
+
+    scene = GAME;
+}
+
+
 void handle_resize() {
     window.screen_width = GetScreenWidth();
     window.screen_height = GetScreenHeight();
@@ -365,6 +430,56 @@ void handle_resize() {
     );
     window.offset_x = (window.screen_width - window.scale * WINDOW_WIDTH) / 2;
     window.offset_y = (window.screen_height - window.scale * WINDOW_HEIGHT) / 2;
+}
+
+
+void set_offset(MOVE_DIRECTION dir) {
+    switch (dir) {
+        case SOUTH_WEST:
+            ox = -1;
+            oy = 1;
+            break;
+        case NORTH_EAST:
+            ox = 1;
+            oy = -1;
+            break;
+        case NORTH_WEST:
+            ox = -1;
+            oy = -1;
+            break;
+        case SOUTH_EAST:
+            ox = 1;
+            oy = 1;
+            break;
+        default:
+            ox = 0;
+            oy = 0;
+    }
+}
+
+
+MOVE_DIRECTION valid_move() {
+    // Prove that there is still a valid move!
+    for (int i = 1; i < 5; i++) {
+        set_offset(i);
+        int nx = px + ox;
+        int ny = py + oy;
+
+        int new_index = player_index(nx, ny);
+        // Not trying to move into trail
+        if (trail[new_index] == NO_DIRECTION) {
+            // Not trying to move off map
+            if (nx > 0 && nx < bounds_x && ny > 0 && ny < bounds_y) {
+                // Not trying to move into wall and no zaps left
+                bool wall = should_stop_zip(px, py, i);
+                if (!wall || (zaps > 0 && wall)) {
+                    return i;
+                    break;
+                }
+            }
+        }
+    }
+    return NO_DIRECTION;
 }
 
 
@@ -406,13 +521,13 @@ bool should_stop_zip(int x, int y, MOVE_DIRECTION dir) {
         case NO_DIRECTION:
             break;
         case SOUTH_WEST:
-            return x <= 0 || y >= BOUNDS_Y || grid[player_maze_index(x, y, dir)] == WALL_BACKWARD;
+            return x <= 0 || y >= bounds_y || grid[player_maze_index(x, y, dir)] == WALL_BACKWARD;
         case NORTH_EAST:
-            return x >= BOUNDS_X || y <= 0 || grid[player_maze_index(x, y, dir)] == WALL_BACKWARD;
+            return x >= bounds_x || y <= 0 || grid[player_maze_index(x, y, dir)] == WALL_BACKWARD;
         case NORTH_WEST:
             return x <= 0 || y <= 0 || grid[player_maze_index(x, y, dir)] == WALL_FORWARD;
         case SOUTH_EAST:
-            return x >= BOUNDS_X || y >= BOUNDS_Y || grid[player_maze_index(x, y, dir)] == WALL_FORWARD;
+            return x >= bounds_x || y >= bounds_y || grid[player_maze_index(x, y, dir)] == WALL_FORWARD;
     }
     return true;
 }
@@ -491,6 +606,7 @@ void update_time_and_seed() {
     if (seed != date_buffer.day) {
         seed = date_buffer.day - DAY_PUBLISHED;
         SetRandomSeed(seed);
+        load_maze();
     }
 }
 
@@ -595,6 +711,7 @@ void update_input_buffer() {
 void render_menu() {
     Vector2 pos = (Vector2) {0, 0};
     Rectangle logo_rect = (Rectangle) {0, 0, 144, 144};
+    Rectangle button_rect = (Rectangle) {0, 0, 96, 96};
 
     ClearBackground(C64_BLUE);
 
@@ -605,37 +722,38 @@ void render_menu() {
     DrawRectangle(0, 0, CELL_SIZE, WINDOW_HEIGHT, C64_BLUE);
     DrawRectangle(WINDOW_WIDTH - CELL_SIZE, 0, CELL_SIZE, WINDOW_HEIGHT, C64_BLUE);
 
+    logo_rect.x = 0;
+    if ((ticks / 120) % 2 == 0) {
+        logo_rect.x = logo_rect.width;
+    }
     DrawTextureRec(logo, logo_rect, (Vector2) {88, 32}, C64_WHITE);
 
-    // Action highscore
-    render_string(pos, action_highscore_name, NAME_LEN, true, C64_YELLOW);
-
-    pos.y = 11 * CELL_SIZE;
-    render_integer(pos, action_highscore, SCORE_LEN, true, C64_WHITE);
-
-    // Puzzle highscore
-    pos.x = WINDOW_WIDTH - CELL_SIZE;
-    pos.y = 0;
-    render_string(pos, puzzle_highscore_name, NAME_LEN, true, C64_YELLOW);
-
-    pos.y = 11 * CELL_SIZE;
-    render_integer(pos, puzzle_highscore, SCORE_LEN, true, C64_WHITE);
+    /*// Action highscore*/
+    /*render_string(pos, action_highscore_name, NAME_LEN, true, C64_YELLOW);*/
+    /**/
+    /*pos.y = 11 * CELL_SIZE;*/
+    /*render_integer(pos, action_highscore, SCORE_LEN, true, C64_WHITE);*/
+    /**/
+    /*pos.y = 14 * CELL_SIZE;*/
+    /*render_string(pos, "ACTION BEST :", 13, true, C64_YELLOW);*/
+    /**/
+    /*// Puzzle highscore*/
+    /*pos.x = WINDOW_WIDTH - CELL_SIZE;*/
+    /*pos.y = 0;*/
+    /*render_string(pos, puzzle_highscore_name, NAME_LEN, true, C64_YELLOW);*/
+    /**/
+    /*pos.y = 11 * CELL_SIZE;*/
+    /*render_integer(pos, puzzle_highscore, SCORE_LEN, true, C64_WHITE);*/
+    /**/
+    /*pos.y = 14 * CELL_SIZE;*/
+    /*render_string(pos, "PUZZLE BEST :", 13, true, C64_YELLOW);*/
 
     // New daily in
     int length = 27;
-    C64_CHARACTER new_daily[] = {
-        C64_N, C64_E, C64_W, C64_BLANK,
-        C64_D, C64_A, C64_I, C64_L, C64_Y, C64_BLANK,
-        C64_M, C64_A, C64_Z, C64_E, C64_BLANK,
-        C64_I, C64_N, C64_BLANK,
-        C64_BLANK, C64_BLANK, C64_COLON,
-        C64_BLANK, C64_BLANK, C64_COLON,
-        C64_BLANK, C64_BLANK, C64_EXCLAMATION
-    };
     pos.x = 56;
     pos.y = 16;
     DrawRectangleV(pos, (Vector2) {length * CELL_SIZE, CELL_SIZE}, C64_BLUE);
-    render_string(pos, new_daily, length, false, C64_WHITE);
+    render_string(pos, "NEW DAILY MAZE IN   :  :  !", length, false, C64_WHITE);
     pos.x = 208;
     render_integer(pos, date_buffer.hours, 2, false, WHITE);
     pos.x = 232;
@@ -647,16 +765,51 @@ void render_menu() {
     pos.x = 72;
     pos.y = 8;
     length = 15;
-    C64_CHARACTER todays_seed[] = {
-        C64_T, C64_O, C64_D, C64_A, C64_Y, C64_APOSTROPHE, C64_S, C64_BLANK,
-        C64_S, C64_E, C64_E, C64_D, C64_BLANK,
-        C64_COLON, C64_BLANK
-    };
     DrawRectangleV(pos, (Vector2) {24 * CELL_SIZE, CELL_SIZE}, C64_BLUE);
-    render_string(pos, todays_seed, length, false, C64_LIGHT_BLUE);
+    render_string(pos, "TODAY'S SEED :", length, false, C64_LIGHT_BLUE);
 
     pos.x = 248;
     render_integer(pos, seed, 8, false, C64_LIGHT_BLUE);
+
+    // Credits
+    pos.x = 120;
+    pos.y = 184;
+    length = 10;
+    DrawRectangleV(pos, (Vector2) {length * CELL_SIZE, CELL_SIZE}, C64_BLUE);
+    render_string(pos, "SEBZANARDO", length, false, C64_LIGHT_BLUE);
+
+    // TODO: Daily login/attempt streak
+
+    // BUTTONS!
+    pos.x = 7;
+    pos.y = 55;
+    button_rect.x = button_rect.width * 2;
+    DrawTextureRec(buttons, button_rect, pos, C64_WHITE);
+    button_rect.x = button_rect.width * 4;
+    DrawTextureRec(buttons, button_rect, pos, C64_WHITE);
+
+    pos.x = 215;
+    pos.y = 55;
+    button_rect.x = button_rect.width * 2;
+    DrawTextureRec(buttons, button_rect, pos, C64_WHITE);
+    button_rect.x = button_rect.width * 5;
+    DrawTextureRec(buttons, button_rect, pos, C64_WHITE);
+
+    // Button Cursor
+    button_rect.x = button_rect.width;
+    /*if ((ticks / 24) % 2 == 0) {*/
+    /*    button_rect.x = button_rect.width;*/
+    /*}*/
+
+    if (ui_index == -1) {
+        pos.x = 7;
+        pos.y = 55;
+        DrawTextureRec(buttons, button_rect, pos, C64_WHITE);
+    } else if (ui_index == 1) {
+        pos.x = 215;
+        pos.y = 55;
+        DrawTextureRec(buttons, button_rect, pos, C64_WHITE);
+    }
 }
 
 
@@ -703,30 +856,53 @@ void render_game() {
     char_rect.x = C64_BOLT * CELL_SIZE;
     pos.x = WINDOW_WIDTH - CELL_SIZE;
     pos.y = 0;
-    for (int i = 0; i < zaps; i++) {
-        DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+    for (int i = 0; i < GRID_HEIGHT - 1; i++) {
+        Color colour = i < zaps ? C64_YELLOW : C64_LIGHT_BLUE;
+        DrawTextureRec(spritesheet, char_rect, pos, colour);
         pos.y += CELL_SIZE;
     }
 
-    // Name
     pos.x = 0;
     pos.y = 0;
-    render_string(pos, puzzle_highscore_name, NAME_LEN, true, C64_YELLOW);
-
-    // Highscore
-    pos.y = CELL_SIZE * 11;
-    render_integer(pos, puzzle_highscore, SCORE_LEN, true, C64_WHITE);
-
-    // Trophy
-    pos.y = CELL_SIZE * 14;
-    if (score > puzzle_highscore) {
-        char_rect.x = C64_TROPHY * CELL_SIZE;
-        DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
-    }
+    /*// Name*/
+    /*render_string(pos, puzzle_highscore_name, NAME_LEN, true, C64_YELLOW);*/
+    /**/
+    /*// Highscore*/
+    /*pos.y = CELL_SIZE * 11;*/
+    /*render_integer(pos, puzzle_highscore, SCORE_LEN, true, C64_WHITE);*/
+    /**/
+    /*// Trophy*/
+    /*pos.y = CELL_SIZE * 14;*/
+    /*if (score > puzzle_highscore) {*/
+    /*    char_rect.x = C64_TROPHY * CELL_SIZE;*/
+    /*    DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);*/
+    /*}*/
 
     // Current score
     pos.y = CELL_SIZE * 24;
     render_integer(pos, score, SCORE_LEN, true, C64_WHITE);
+
+    if (ui_timer > 0) {
+        pos.x = 104;
+        pos.y = 72;
+        DrawRectangleV(pos, (Vector2) {14 * CELL_SIZE, CELL_SIZE}, C64_BLUE);
+        if (!gameover) {
+            if (ui_timer < 40) {
+                render_string(pos, "LOAD", 4, false, C64_WHITE);
+                pos.x += 5 * CELL_SIZE;
+            }
+            if (ui_timer < 25) {
+                render_string(pos, "READY", 6, false, C64_WHITE);
+                pos.x += 6 * CELL_SIZE;
+            }
+            if (ui_timer < 10) {
+                render_string(pos, "RUN", 3, false, C64_WHITE);
+            }
+        } else {
+            pos.x += 24;
+            render_string(pos, "GAMEOVER", 8, false, C64_WHITE);
+        }
+    }
 }
 
 
@@ -769,9 +945,9 @@ void render_integer(Vector2 pos, int value, int length, bool vertical, Color col
 }
 
 
-void render_string(Vector2 pos, C64_CHARACTER* s, int length, bool vertical, Color colour) {
+void render_string(Vector2 pos, char* s, int length, bool vertical, Color colour) {
     for (int i = 0; i < length; i++) {
-        char_rect.x = s[i] * CELL_SIZE;
+        char_rect.x = char_index(s[i]) * CELL_SIZE;
         DrawTextureRec(spritesheet, char_rect, pos, colour);
         if (vertical) {
             pos.y += CELL_SIZE;
@@ -779,4 +955,20 @@ void render_string(Vector2 pos, C64_CHARACTER* s, int length, bool vertical, Col
             pos.x += CELL_SIZE;
         }
     }
+}
+
+
+C64_CHARACTER char_index(char c) {
+    if (c >= 'A' && c <= 'Z') {
+        return c - 65 + 20;
+    } else if (c >= '0' && c <= '9') {
+        return c - 48 + 10;
+    } else if (c == '!') {
+        return C64_EXCLAMATION;
+    } else if (c == ':') {
+        return C64_COLON;
+    } else if (c == '\'') {
+        return C64_APOSTROPHE;
+    }
+    return 50;
 }

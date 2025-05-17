@@ -1,5 +1,3 @@
-/*#include <stdio.h>*/
-/*#include <assert.h>*/
 #include <time.h>
 #include <stdint.h>
 #include <stdbool.h>
