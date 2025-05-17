@@ -29,7 +29,7 @@
 
 #define WINDOW_CAPTION "ZAPZIPZAP"
 #define FPS 30  // SHeeeeeshhh, Apple iPhone you really making things difficult
-#define MUSIC_VOLUME 0.15f
+#define MUSIC_VOLUME 0.1f
 
 #define NAME_LEN 3
 #define SCORE_LEN 8

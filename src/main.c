@@ -143,6 +143,10 @@ int main(void) {
     sfx_zap = LoadSound("src/resources/zap.mp3");
     sfx_zip = LoadSound("src/resources/zip.mp3");
     SetSoundVolume(sfx_zip, 0.6f);
+    sfx_up = LoadSound("src/resources/up.mp3");
+    sfx_down = LoadSound("src/resources/down.mp3");
+    sfx_left = LoadSound("src/resources/left.mp3");
+    sfx_right = LoadSound("src/resources/right.mp3");
 
     RenderTexture2D target = LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT);
     spritesheet = LoadTexture("src/resources/fontsheet.png");
