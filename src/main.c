@@ -494,7 +494,7 @@ void check_for_collectible(int new_index) {
         collectibles[new_index] = false;
         zaps++;
         zaps = MIN(zaps, GRID_HEIGHT - 1);
-        score += ZAP_BONUS_SCORE;
+        if (is_action_mode) score += ZAP_BONUS_SCORE;
     }
 }
 
