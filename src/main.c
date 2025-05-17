@@ -212,9 +212,9 @@ int main(void) {
                             PlaySound(sfx_scroll_south);
                         } else if (ui_timer == 24) {
                             PlaySound(sfx_scroll_west);
-                        } else if (ui_timer == 9) {
+                        } else if (ui_timer == 12) {
                             PlaySound(sfx_scroll_east);
-                        } else if (ui_timer == 1) {
+                        } else if (ui_timer == 3) {
                             PlaySound(sfx_scroll_north);
                         }
                     } else {
