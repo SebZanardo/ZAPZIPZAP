@@ -203,7 +203,7 @@ int main(void) {
                             PlaySound(sfx_scroll_west);
                         } else if (ui_timer == 12) {
                             PlaySound(sfx_scroll_east);
-                        } else if (ui_timer == 3) {
+                        } else if (ui_timer == 5) {
                             PlaySound(sfx_scroll_north);
                         }
                     } else {
@@ -498,7 +498,7 @@ void load_maze() {
 
 
 void load_game() {
-    PlaySound(sfx_zap);
+    PlaySound(sfx_select);
 
     if (ui_index == 1) {
         is_action_mode = false;
