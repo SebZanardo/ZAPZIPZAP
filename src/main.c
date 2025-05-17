@@ -59,6 +59,10 @@ Sound sfx_scroll_west;
 Sound sfx_select;
 Sound sfx_zap;
 Sound sfx_zip;
+Sound sfx_left;
+Sound sfx_right;
+Sound sfx_up;
+Sound sfx_down;
 
 Texture2D spritesheet;
 Texture2D buttons;
@@ -180,7 +184,7 @@ int main(void) {
                     if (ui_index == -1) {
                         load_game();
                     }
-                    PlaySound(sfx_scroll_west);
+                    PlaySound(sfx_left);
                     ui_index = -1;
                 } else if (
                     (input_buffer.mouse_clicked && input_buffer.mouse_pos.x >= window.screen_width / 2) ||
@@ -189,7 +193,7 @@ int main(void) {
                     if (ui_index == 1) {
                         load_game();
                     }
-                    PlaySound(sfx_scroll_east);
+                    PlaySound(sfx_right);
                     ui_index = 1;
                 }
                 break;
@@ -198,13 +202,13 @@ int main(void) {
                     if (!gameover) {
                         // Countdown
                         if (ui_timer == 42) {
-                            PlaySound(sfx_scroll_south);
+                            PlaySound(sfx_down);
                         } else if (ui_timer == 27) {
-                            PlaySound(sfx_scroll_west);
+                            PlaySound(sfx_left);
                         } else if (ui_timer == 12) {
-                            PlaySound(sfx_scroll_east);
-                        } else if (ui_timer == 5) {
-                            PlaySound(sfx_scroll_north);
+                            PlaySound(sfx_right);
+                        } else if (ui_timer == 3) {
+                            PlaySound(sfx_up);
                         }
                     } else {
                         // GAMEOVER delay
@@ -227,7 +231,9 @@ int main(void) {
                             if (should_stop_zip(px, py, input_buffer.direction)) break;
                             new_index = player_index(px + ox, py + oy);
                             if (trail[new_index] != NO_DIRECTION) {
-                                /*PlaySound(sfx_blocked);*/
+                                if (steps == 0) {
+                                    PlaySound(sfx_blocked);
+                                }
                                 input_buffer.direction = NO_DIRECTION;
                                 break;
                             }
@@ -256,7 +262,6 @@ int main(void) {
                         // ZIP SOUND pick random pitch
                         if (steps > 0) {
                             float pitch = 1 - (float)GetRandomValue(1, 8) / 40.0f;
-                            /*printf("%lf\n", pitch);*/
                             SetSoundPitch(sfx_zip, pitch);
                             PlaySound(sfx_zip);
                         }
@@ -362,33 +367,34 @@ int main(void) {
             case SCORE:
                 if (gameover) {
                     if (input_buffer.direction != NO_DIRECTION || input_buffer.select) {
+                        PlaySound(sfx_right);
                         gameover = false;
                     }
                 } else {
                     if (input_buffer.select) {
-                        PlaySound(sfx_scroll_east);
+                        PlaySound(sfx_right);
                         ui_index++;
                     }
 
                     if (input_buffer.direction == NORTH_EAST) {
-                        PlaySound(sfx_scroll_east);
+                        PlaySound(sfx_right);
                         ui_index++;
                     } else if (input_buffer.direction == SOUTH_WEST) {
-                        PlaySound(sfx_scroll_west);
+                        PlaySound(sfx_left);
                         ui_index--;
                         if (ui_index < 0) {
                             gameover = true;
                             ui_index = 0;
                         }
                     } else if (input_buffer.direction == NORTH_WEST) {
-                        PlaySound(sfx_scroll_north);
+                        PlaySound(sfx_up);
                         // Increment letter
                         enter_name[ui_index]++;
                         if (enter_name[ui_index] > C64_Z) {
                             enter_name[ui_index] = C64_A;
                         }
                     } else if (input_buffer.direction == SOUTH_EAST) {
-                        PlaySound(sfx_scroll_south);
+                        PlaySound(sfx_down);
                         // Decrement letter
                         enter_name[ui_index]--;
                         if (enter_name[ui_index] < C64_A) {
@@ -479,6 +485,10 @@ int main(void) {
     UnloadSound(sfx_select);
     UnloadSound(sfx_zap);
     UnloadSound(sfx_zip);
+    UnloadSound(sfx_left);
+    UnloadSound(sfx_right);
+    UnloadSound(sfx_up);
+    UnloadSound(sfx_down);
 
     UnloadImage(icon);
     UnloadTexture(spritesheet);
@@ -733,11 +743,11 @@ void new_scroll_direction() {
 
     // PLAY NOTE depending on direction
     if (scroll_dir == NORTH) {
-        PlaySound(sfx_scroll_north);
+        PlaySound(sfx_scroll_south);
     } else if (scroll_dir == EAST) {
         PlaySound(sfx_scroll_east);
     } else if (scroll_dir == SOUTH) {
-        PlaySound(sfx_scroll_south);
+        PlaySound(sfx_scroll_north);
     } else if (scroll_dir == WEST) {
         PlaySound(sfx_scroll_west);
     }
