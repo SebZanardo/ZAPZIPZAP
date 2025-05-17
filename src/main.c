@@ -40,6 +40,7 @@ C64_CHARACTER char_index(char c);
 WindowParameters window;
 InputBuffer input_buffer;
 DateBuffer date_buffer;
+bool handheld;
 
 uint32_t seed;
 uint32_t ticks = 0;
@@ -110,7 +111,7 @@ int main(void) {
     PlayMusicStream(music);
 
     #ifdef WEB_BUILD
-        bool handheld = IsMobile();
+        handheld = IsMobile();
     #endif
 
     RenderTexture2D target = LoadRenderTexture(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -146,12 +147,16 @@ int main(void) {
                 update_time_and_seed();
                 if (input_buffer.select && ui_index != 0) {
                     load_game();
-                } else if (input_buffer.mouse_down && input_buffer.mouse_pos.x < window.screen_width / 2) {
+                } else if (input_buffer.mouse_clicked && input_buffer.mouse_pos.x < window.screen_width / 2) {
+                    if (ui_index == -1) {
+                        load_game();
+                    }
                     ui_index = -1;
-                    load_game();
-                } else if (input_buffer.mouse_down && input_buffer.mouse_pos.x >= window.screen_width / 2) {
+                } else if (input_buffer.mouse_clicked && input_buffer.mouse_pos.x >= window.screen_width / 2) {
+                    if (ui_index == 1) {
+                        load_game();
+                    }
                     ui_index = 1;
-                    load_game();
                 } else if (input_buffer.direction == NORTH_EAST || input_buffer.direction == SOUTH_EAST) {
                     if (ui_index == 1) {
                         load_game();
@@ -623,6 +628,7 @@ void update_input_buffer() {
 
     input_buffer.direction = NO_DIRECTION;
     input_buffer.select = false;
+    input_buffer.mouse_clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !input_buffer.mouse_down) {
         input_buffer.drag_start = input_buffer.mouse_pos;
@@ -630,7 +636,7 @@ void update_input_buffer() {
         input_buffer.held_timer = 0;
     }
 
-    if (input_buffer.mouse_down) {
+    if (input_buffer.mouse_down && scene != MENU) {
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
             // Drag
             Vector2 drag = Vector2Subtract(input_buffer.mouse_pos, input_buffer.drag_start);

@@ -159,6 +159,7 @@ typedef struct {
 typedef struct {
     MOVE_DIRECTION direction;
     bool mouse_down;
+    bool mouse_clicked;
     bool select;
     uint32_t held_timer;
     Vector2 mouse_pos;
