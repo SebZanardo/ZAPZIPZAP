@@ -1,0 +1,16 @@
+WEB BUILD:
++----+
+|\  /|
+| \/ |
+| /\ |
+|/  \|
++----+
+- Make highscore name select input easier
+
+
+APP:
+- Highscore saving
+- Daily online leaderboard
+- More soundtracks
+- Unlockable colour palettes
+- Daily login streak counter
