@@ -1107,18 +1107,34 @@ void render_game() {
 
     pos.x = 0;
     pos.y = 0;
-    // Name
-    render_string(pos, puzzle_highscore_name, NAME_LEN, true, C64_YELLOW, false);
+    if (is_action_mode) {
+        // Name
+        render_string(pos, action_highscore_name, NAME_LEN, true, C64_YELLOW, false);
 
-    // Highscore
-    pos.y = CELL_SIZE * 11;
-    render_integer(pos, puzzle_highscore, SCORE_LEN, true, C64_WHITE);
+        // Highscore
+        pos.y = CELL_SIZE * 11;
+        render_integer(pos, action_highscore, SCORE_LEN, true, C64_WHITE);
 
-    // Trophy
-    pos.y = CELL_SIZE * 14;
-    if (score > puzzle_highscore) {
-        char_rect.x = C64_TROPHY * CELL_SIZE;
-        DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+        // Trophy
+        pos.y = CELL_SIZE * 14;
+        if (score > action_highscore) {
+            char_rect.x = C64_TROPHY * CELL_SIZE;
+            DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+        }
+    } else {
+        // Name
+        render_string(pos, puzzle_highscore_name, NAME_LEN, true, C64_YELLOW, false);
+
+        // Highscore
+        pos.y = CELL_SIZE * 11;
+        render_integer(pos, puzzle_highscore, SCORE_LEN, true, C64_WHITE);
+
+        // Trophy
+        pos.y = CELL_SIZE * 14;
+        if (score > puzzle_highscore) {
+            char_rect.x = C64_TROPHY * CELL_SIZE;
+            DrawTextureRec(spritesheet, char_rect, pos, C64_YELLOW);
+        }
     }
 
     // Current score
