@@ -1,3 +1,6 @@
+Change name to ZIPZAPZUP
+
+
 WEB BUILD:
 +----+
 |\  /|
@@ -6,6 +9,8 @@ WEB BUILD:
 |/  \|
 +----+
 - Make highscore name select input easier
+- Both modes have diecut edge pattern to make offscreen easier to detect
+- Type name using keyboard
 
 
 APP:
